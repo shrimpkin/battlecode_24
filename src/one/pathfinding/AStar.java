@@ -1,4 +1,4 @@
-package quick.pathfinding;
+package one.pathfinding;
 
 import battlecode.common.*;
 

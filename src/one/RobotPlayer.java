@@ -1,6 +1,7 @@
 package one;
 
 import battlecode.common.*;
+import quick.pathfinding.AStar;
 import scala.util.Random;
 
 /**
@@ -46,10 +47,17 @@ public strictfp class RobotPlayer {
                 if(rc.readSharedArray(1) != rc.getRoundNum()) {
                     updateMap(rc);
                     Direction dir = directions[rng.nextInt(directions.length)];
-                    if(rc.canMove(dir)) {
-                        rc.move(dir);
-                    }
-
+                    
+                    MapLocation[] locations = rc.senseNearbyCrumbs(-1);
+                    MapLocation location = null;
+                    if(locations.length > 0) location = locations[0];
+                    
+                    Direction astar = Direction.CENTER;
+                    if(location != null) astar = AStar.getBestDirection(rc, location);
+                    
+                    if(astar != Direction.CENTER) if(rc.canMove(astar)) rc.move(astar);
+                    else if(rc.canMove(dir)) rc.move(dir);
+                    
                     rc.writeSharedArray(1, rc.getRoundNum());
 
                     writeMapToShared(rc);
