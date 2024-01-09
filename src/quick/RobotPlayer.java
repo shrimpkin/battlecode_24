@@ -44,7 +44,7 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
-                indicator += rc.readSharedArray(SA.enemyFlag) + " ";
+                indicator += sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) + " ";
                 if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
                     if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
                         rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
@@ -53,6 +53,11 @@ public strictfp class RobotPlayer {
                         rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
                     }
                 }
+
+                // if(rc.canSenseLocation(sa.decodeLocation(rc.readSharedArray(SA.enemyFlag))) 
+                //     && rc.senseNearbyFlags(-1).length == 0) {
+                //     rc.writeSharedArray(SA.enemyFlag, 0);
+                // }
 
                 if(rc.canPickupFlag(rc.getLocation())) {
                     rc.pickupFlag(rc.getLocation());
@@ -90,7 +95,9 @@ public strictfp class RobotPlayer {
         
         rc.writeSharedArray(3, rc.readSharedArray(3) + 1);
         ID = rc.readSharedArray(3);
-
+        if(rc.readSharedArray(3) == 50) {
+            rc.writeSharedArray(3, 0);
+        }
     }
 
     public static MapLocation move(RobotController rc) throws GameActionException {
