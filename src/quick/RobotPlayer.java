@@ -1,6 +1,7 @@
 package quick;
 
 import battlecode.common.*;
+import quick.pathfinding.AStar;
 import scala.util.Random;
 
 /**
@@ -43,14 +44,22 @@ public strictfp class RobotPlayer {
                 }
             } else {
                 MapInfo info = rc.senseMapInfo(rc.getLocation());
-                if(info.isSpawnZone()) {
-                    for(Direction dir : directions) {
-                        if(rc.canMove(dir)) {
-                            rc.move(dir);
+
+                MapLocation location = rc.senseNearbyCrumbs(-1)[0];
+
+                Direction astar = AStar.getBestDirection(rc, location);
+                if(rc.canMove(astar)) {
+                    rc.move(astar);
+                } else {
+                    if(info.isSpawnZone()) {
+                        for(Direction dir : directions) {
+                            if(rc.canMove(dir)) {
+                                rc.move(dir);
+                            }
                         }
                     }
                 }
-
+        
                 combat(rc);
                 map.updateMap(rc);
 
