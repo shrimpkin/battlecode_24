@@ -43,31 +43,7 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
-                MapInfo info = rc.senseMapInfo(rc.getLocation());
-
-                
-                MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-                MapLocation location = null;
-                if(locations.length > 0) location = locations[0];
-                
-                Direction astar = Direction.CENTER;
-                if(location != null) astar = AStar.getBestDirection(rc, location);
-                
-                if(astar != Direction.CENTER) {
-                    if(rc.canMove(astar)) {
-                    rc.move(astar);
-                    } else {
-                        if(info.isSpawnZone()) {
-                            for(Direction dir : directions) {
-                                if(rc.canMove(dir)) {
-                                    rc.move(dir);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-        
+                move(rc);
                 combat(rc);
                 map.updateMap(rc);
 
@@ -92,6 +68,35 @@ public strictfp class RobotPlayer {
     public static void init(RobotController rc) throws GameActionException {
         map.setDimension(rc.getMapWidth(), rc.getMapHeight());
         sa.setDimension(rc.getMapWidth(), rc.getMapHeight()); 
+    }
+
+    public static void move(RobotController rc) throws GameActionException {
+        Direction dir = directions[rng.nextInt(directions.length)];
+
+        MapLocation[] locations = rc.senseNearbyCrumbs(-1);
+        MapLocation location = null;
+        if(locations.length > 0) location = locations[0];
+        
+        
+        Direction astar = Direction.CENTER;
+        if(location != null) {
+            Direction towards = rc.getLocation().directionTo(location);
+            if(rc.canFill(rc.getLocation().add(towards))) {
+                rc.fill(rc.getLocation().add(towards));
+            }
+
+            astar = AStar.getBestDirection(rc, location);
+        }
+
+        if(astar != Direction.CENTER) {
+            if(rc.canMove(astar)) {
+                rc.move(astar);
+            } 
+        }  else {
+            if(rc.canMove(dir)) {
+                rc.move(dir);
+            }
+        }
     }
 
     /**
