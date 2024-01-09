@@ -11,6 +11,9 @@ public class SA {
     public static int FLAG3 = 2;
     public static int enemyFlag = 3;
 
+    public static int e_loc_start = 4;
+    public static int f_loc_start = 56;
+
     int width, height;
 
     public void setDimension(int width, int height) {
@@ -27,7 +30,7 @@ public class SA {
 
         int x = value % width;
         int y = value / width;
-
+        
         return new MapLocation(x, y);
     }
 
