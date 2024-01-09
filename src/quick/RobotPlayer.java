@@ -44,10 +44,11 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
+                indicator += rc.readSharedArray(SA.enemyFlag) + " ";
                 if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
                     if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
                         rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
-                    } else if(ID == 19) {
+                    } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
                         MapLocation loc = rc.senseBroadcastFlagLocations()[0];
                         rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
                     }
@@ -59,13 +60,11 @@ public strictfp class RobotPlayer {
 
                 indicator += move(rc);
                 combat(rc);
+
                 map.updateMap(rc);
-
                 map.writeMapToShared(rc); 
-                indicator += "wrote ";
                 map.readMapFromShared(rc);
-                indicator += "read ";
-
+                
                 indicator += map.num;
             }
 
@@ -99,8 +98,8 @@ public strictfp class RobotPlayer {
         MapLocation target = null;
 
         Direction dir = directions[rng.nextInt(directions.length)];
-        
-        if(rc.hasFlag()) {
+        boolean hasFlag = rc.hasFlag();
+        if(hasFlag) {
             target = sa.decodeLocation(rc.readSharedArray(0));
         } else if(ID <= 6) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
@@ -144,6 +143,10 @@ public strictfp class RobotPlayer {
             }
         }
         
+        if(rc.hasFlag() != hasFlag) {
+            rc.writeSharedArray(SA.enemyFlag, 0);
+        }
+
         return target;
     }
 
