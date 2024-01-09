@@ -58,8 +58,6 @@ public strictfp class RobotPlayer {
                 }
                 
                 rc.setIndicatorString("total revealed: " + map.num);
-
-                
             }
             Clock.yield();
         }

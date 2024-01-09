@@ -10,9 +10,10 @@ import scala.util.Random;
  */
 public strictfp class RobotPlayer {
     static m_Map map = new m_Map();
+    static SA sa = new SA();
 
     static final Random rng = new Random(6147);
-
+    
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
         Direction.NORTH,
@@ -38,7 +39,8 @@ public strictfp class RobotPlayer {
             }
 
             if(rc.getRoundNum() == 1) {
-                map.setDimension(rc.getMapWidth(), rc.getMapHeight()); 
+                map.setDimension(rc.getMapWidth(), rc.getMapHeight());
+                sa.setDimension(rc.getMapWidth(), rc.getMapHeight()); 
             }
 
             if(!rc.isSpawned()) {
@@ -96,5 +98,44 @@ public strictfp class RobotPlayer {
             
             map.setTerrain(info.getMapLocation(), terrain);
         }
+
+        FlagInfo[] flags = rc.senseNearbyFlags(-1);
+        for(FlagInfo flag : flags) {
+            if(flag.getTeam() == rc.getTeam()) {
+                
+            }
+        }
+    }
+
+    public static void readMapFromShared(RobotController rc) throws GameActionException {
+        int index = 2;
+        
+        while(true) {
+            int value = rc.readSharedArray(index);
+            if(value == 65535) break;
+
+            map.setTerrain(sa.decodeLocation(value), sa.decodePrefix(value));
+            index++;
+        }
+    }
+
+    public static void writeMapToShared(RobotController rc) throws GameActionException {
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        int index = 2;
+
+        for(MapInfo info : mapInfo) {
+            int terrain = 0; 
+            if(info.isWall()) terrain = Constants.WALL;
+            if(info.isWater()) terrain = Constants.WATER;
+            if(info.isPassable()) terrain = Constants.GRASS;
+            
+           int enc = sa.encode(info.getMapLocation(), terrain);
+
+            rc.writeSharedArray(index, enc);
+            index++;
+            if(index > 62) break;
+        }
+
+        rc.writeSharedArray(index, 65535);
     }
 }
