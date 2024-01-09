@@ -55,9 +55,21 @@ public class m_Map {
         if(rc.readSharedArray(0) == 0 || rc.readSharedArray(1) == 0 || rc.readSharedArray(2) == 0) {
             setFlags(rc);
         }
+
     }
 
-    public void setFlags(RobotController rc) throws GameActionException {
+    /**
+     * helper method that will set symetry if can be determined
+     * TODO
+     */
+    private void determineSymetry(RobotController rc) throws GameActionException {
+
+    }
+
+    /**
+     * A helper method that will add flags to the shared array if they haven't been yet
+     */
+    private void setFlags(RobotController rc) throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1);
         for(FlagInfo flag : flags) {
             if(flag.getTeam() == rc.getTeam()) {

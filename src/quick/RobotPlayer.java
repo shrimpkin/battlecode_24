@@ -44,7 +44,7 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
-                move(rc);
+                indicator += move(rc);
                 combat(rc);
                 map.updateMap(rc);
 
@@ -60,7 +60,7 @@ public strictfp class RobotPlayer {
                 MapLocation loc = sa.decodeLocation(rc.readSharedArray(i));
                 indicator += "(" + loc.x + ", " + loc.y + ")";
             }
-            
+
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
@@ -81,15 +81,32 @@ public strictfp class RobotPlayer {
 
     }
 
-    public static void move(RobotController rc) throws GameActionException {
+    public static MapLocation move(RobotController rc) throws GameActionException {
+        
         MapLocation target = null;
 
         Direction dir = directions[rng.nextInt(directions.length)];
 
-        MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-        if(locations.length > 0) target = locations[0];
-        
-        
+        if(ID <= 6) {
+            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
+            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+                return target;
+            }
+        } else if(ID <= 12) {
+            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG2));
+            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+                return target;
+            }
+        } else if(ID <= 18) {
+            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG3));
+            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+                return target; 
+            }
+        } else {
+            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
+            if(locations.length > 0) target = locations[0];
+        }
+
         Direction astar = Direction.CENTER;
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
@@ -110,6 +127,7 @@ public strictfp class RobotPlayer {
             }
         }
         
+        return target;
     }
 
     /**
@@ -123,9 +141,7 @@ public strictfp class RobotPlayer {
         for(RobotInfo robot : enemyRobots) {
             if(rc.canAttack(robot.getLocation())) {
                 rc.attack(robot.getLocation());
-            } else {
-                break;
-            }
+            } 
         }
 
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
@@ -133,9 +149,7 @@ public strictfp class RobotPlayer {
         for(RobotInfo robot : friendlyRobots) {
             if(rc.canHeal(robot.getLocation())) {
                 rc.heal(robot.getLocation());
-            } else {
-                break;
-            }
+            } 
         }
     }
 
