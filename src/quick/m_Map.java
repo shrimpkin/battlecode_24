@@ -41,6 +41,9 @@ public class m_Map {
      * adds all visible terrain to the robots personal map
      */
     public void updateMap(RobotController rc) throws GameActionException {
+        if(rc == null) return;
+        if(rc.senseNearbyMapInfos() == null) return;
+
         MapInfo[] locations = rc.senseNearbyMapInfos();
 
         for(MapInfo info : locations) {
@@ -114,6 +117,9 @@ public class m_Map {
      * writes all visible map location to the shared array
      */
     public void writeMapToShared(RobotController rc) throws GameActionException {
+        if(rc == null) return;
+        if(rc.senseNearbyMapInfos() == null) return;
+
         MapInfo[] mapInfo = rc.senseNearbyMapInfos();
         
         int index;

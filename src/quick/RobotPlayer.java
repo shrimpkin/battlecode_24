@@ -44,6 +44,19 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
+                if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
+                    if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
+                        rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+                    } else if(ID == 19) {
+                        MapLocation loc = rc.senseBroadcastFlagLocations()[0];
+                        rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
+                    }
+                }
+
+                if(rc.canPickupFlag(rc.getLocation())) {
+                    rc.pickupFlag(rc.getLocation());
+                }
+
                 indicator += move(rc);
                 combat(rc);
                 map.updateMap(rc);
@@ -56,10 +69,10 @@ public strictfp class RobotPlayer {
                 indicator += map.num;
             }
 
-            for(int i = 0; i <= 2; i++) {
-                MapLocation loc = sa.decodeLocation(rc.readSharedArray(i));
-                indicator += "(" + loc.x + ", " + loc.y + ")";
-            }
+            // for(int i = 0; i <= 3; i++) {
+            //     MapLocation loc = sa.decodeLocation(rc.readSharedArray(i));
+            //     indicator += "(" + loc.x + ", " + loc.y + ")";
+            // }
 
             rc.setIndicatorString(indicator);
             Clock.yield();
@@ -86,8 +99,10 @@ public strictfp class RobotPlayer {
         MapLocation target = null;
 
         Direction dir = directions[rng.nextInt(directions.length)];
-
-        if(ID <= 6) {
+        
+        if(rc.hasFlag()) {
+            target = sa.decodeLocation(rc.readSharedArray(0));
+        } else if(ID <= 6) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
             if(rc.getLocation().distanceSquaredTo(target) <= 2) {
                 return target;
@@ -102,9 +117,11 @@ public strictfp class RobotPlayer {
             if(rc.getLocation().distanceSquaredTo(target) <= 2) {
                 return target; 
             }
-        } else {
+        } else if(rc.getRoundNum() < 200) {
             MapLocation[] locations = rc.senseNearbyCrumbs(-1);
             if(locations.length > 0) target = locations[0];
+        } else {
+            target = sa.decodeLocation(rc.readSharedArray(SA.enemyFlag));
         }
 
         Direction astar = Direction.CENTER;
@@ -136,6 +153,9 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void combat(RobotController rc) throws GameActionException {
+        if(!rc.isSpawned()) {
+            return;
+        }
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
                 
         for(RobotInfo robot : enemyRobots) {
