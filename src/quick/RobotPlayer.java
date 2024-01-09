@@ -13,8 +13,30 @@ public strictfp class RobotPlayer {
 
     static final Random rng = new Random(6147);
 
+    /** Array containing all the possible movement directions. */
+    static final Direction[] directions = {
+        Direction.NORTH,
+        Direction.NORTHEAST,
+        Direction.EAST,
+        Direction.SOUTHEAST,
+        Direction.SOUTH,
+        Direction.SOUTHWEST,
+        Direction.WEST,
+        Direction.NORTHWEST,
+    };
+
     public static void run(RobotController rc) throws GameActionException {
         while(true) {
+            if(rc.canBuyGlobal(GlobalUpgrade.ACTION)) {
+                System.out.println("Action upgraded!");
+                rc.buyGlobal(GlobalUpgrade.ACTION);
+            } 
+
+            if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) {
+                System.out.println("Healing Upgraded");
+                rc.buyGlobal(GlobalUpgrade.HEALING);
+            }
+
             if(rc.getRoundNum() == 1) {
                 map.setDimension(rc.getMapWidth(), rc.getMapHeight()); 
             }
@@ -25,22 +47,17 @@ public strictfp class RobotPlayer {
                 for(MapLocation spawn : spawnLocs) {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
+            } else {
                 
-                if(rc.getRoundNum() == 1 && rc.getLocation() != null) {
-                    MapLocation location = rc.getLocation();
-                    System.out.println("(" + location.x + "," + location.y + ")");
-                    int encode = map.encode(location, 3);
-                    System.out.println(encode);
-                    MapLocation decode = map.decodeLocation(encode);
-                    int terrain = map.decodeTerrain(encode);
-                    System.out.println("(" + decode.x + "," + decode.y + "," + terrain + ")");
-
-                    updateMap(rc);
-                    System.out.println(map.num);
+                MapInfo info = rc.senseMapInfo(rc.getLocation());
+                if(info.isSpawnZone()) {
+                    for(Direction dir : directions) {
+                        if(rc.canMove(dir)) {
+                            rc.move(dir);
+                        }
+                    }
                 }
 
-                
-            } else {
                 rc.setIndicatorString("before attack");
                 RobotInfo[] enemyRobots = rc.senseNearbyRobots(5, rc.getTeam().opponent());
                 rc.setIndicatorString("after attack");
@@ -58,9 +75,12 @@ public strictfp class RobotPlayer {
                         rc.heal(robot.getLocation());
                     }
                 }
+
+
+                updateMap(rc);
+                rc.setIndicatorString("" + map.num);
             }
 
-            
             Clock.yield();
         }
     }

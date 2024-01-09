@@ -1,4 +1,4 @@
-package quick;
+package one;
 
 import battlecode.common.MapLocation;
 
@@ -6,7 +6,7 @@ import battlecode.common.MapLocation;
  * Class to contain the information the robots know about the map
  */
 public class m_Map {
-    private int[][] terrain = new int[60][60];
+    public int[][] terrain = new int[60][60];
     private int[][] crumb = new int[60][60];
     int width, height;
     int num = 0;
