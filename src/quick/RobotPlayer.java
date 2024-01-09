@@ -106,21 +106,22 @@ public strictfp class RobotPlayer {
 
         Direction dir = directions[rng.nextInt(directions.length)];
         boolean hasFlag = rc.hasFlag();
+        
         if(hasFlag) {
             target = sa.decodeLocation(rc.readSharedArray(0));
         } else if(ID <= 6) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
-            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
                 return target;
             }
         } else if(ID <= 12) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG2));
-            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
                 return target;
             }
         } else if(ID <= 18) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG3));
-            if(rc.getLocation().distanceSquaredTo(target) <= 2) {
+            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
                 return target; 
             }
         } else if(rc.getRoundNum() < 200) {
@@ -144,10 +145,10 @@ public strictfp class RobotPlayer {
             if(rc.canMove(astar)) {
                 rc.move(astar);
             } 
-        }  else {
-            if(rc.canMove(dir)) {
-                rc.move(dir);
-            }
+        }  
+            
+        if(rc.canMove(dir)) {
+            rc.move(dir);
         }
         
         if(rc.hasFlag() != hasFlag) {
