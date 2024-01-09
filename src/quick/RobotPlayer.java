@@ -12,6 +12,7 @@ import scala.util.Random;
 public strictfp class RobotPlayer {
     static m_Map map = new m_Map();
     static SA sa = new SA();
+    static int ID = 0;
 
     static final Random rng = new Random(6147);
     
@@ -31,7 +32,7 @@ public strictfp class RobotPlayer {
         while(true) {
             //used for debugging, only value that should be passed through rc.setIndicator
             //can be seen by hovering over robot
-            String indicator = "";
+            String indicator = ID + ": ";
 
             if(rc.getRoundNum() % 750 == 0) globals(rc);
             if(rc.getRoundNum() == 1) init(rc);
@@ -53,9 +54,14 @@ public strictfp class RobotPlayer {
                 indicator += "read ";
 
                 indicator += map.num;
-                rc.setIndicatorString(indicator);
             }
 
+            for(int i = 0; i <= 2; i++) {
+                MapLocation loc = sa.decodeLocation(rc.readSharedArray(i));
+                indicator += "(" + loc.x + ", " + loc.y + ")";
+            }
+            
+            rc.setIndicatorString(indicator);
             Clock.yield();
         }
     }
@@ -67,25 +73,31 @@ public strictfp class RobotPlayer {
      */
     public static void init(RobotController rc) throws GameActionException {
         map.setDimension(rc.getMapWidth(), rc.getMapHeight());
-        sa.setDimension(rc.getMapWidth(), rc.getMapHeight()); 
+        sa.setDimension(rc.getMapWidth(), rc.getMapHeight());
+        
+        
+        rc.writeSharedArray(3, rc.readSharedArray(3) + 1);
+        ID = rc.readSharedArray(3);
+
     }
 
     public static void move(RobotController rc) throws GameActionException {
+        MapLocation target = null;
+
         Direction dir = directions[rng.nextInt(directions.length)];
 
         MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-        MapLocation location = null;
-        if(locations.length > 0) location = locations[0];
+        if(locations.length > 0) target = locations[0];
         
         
         Direction astar = Direction.CENTER;
-        if(location != null) {
-            Direction towards = rc.getLocation().directionTo(location);
+        if(target != null) {
+            Direction towards = rc.getLocation().directionTo(target);
             if(rc.canFill(rc.getLocation().add(towards))) {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            astar = AStar.getBestDirection(rc, location);
+            astar = AStar.getBestDirection(rc, target);
         }
 
         if(astar != Direction.CENTER) {
@@ -97,6 +109,7 @@ public strictfp class RobotPlayer {
                 rc.move(dir);
             }
         }
+        
     }
 
     /**
