@@ -1,6 +1,8 @@
 package quick;
 
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 
 public class SA {
     //shared array index uses
@@ -22,18 +24,24 @@ public class SA {
     public static int escort = 5;
     public static int f_loc_start = 56;
 
+    RobotController rc;
+    
+
     int width, height;
 
-    public void setDimension(int width, int height) {
+    public void setDimension(int width, int height, RobotController rc) {
         this.width = width;
         this.height = height;
+        this.rc = rc;
     }
 
     /**
      * @param value a number obtained from the shared array, by using the encode method
      * @return the map location that was encoded
      */
-    public MapLocation decodeLocation(int value) {
+    public MapLocation decodeLocation(int index) throws GameActionException {
+        int value = rc.readSharedArray(index);
+
         value /= 10;
 
         int x = value % width;
@@ -46,7 +54,8 @@ public class SA {
      * @param value a number obtained from the shared array, by using the encode method
      * @return the prefix that was encoded
      */
-    public int decodePrefix(int value) {
+    public int decodePrefix(int index) throws GameActionException {
+        int value = rc.readSharedArray(index);
         return value % 10;
     }
 

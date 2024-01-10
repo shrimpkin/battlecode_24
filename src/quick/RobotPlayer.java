@@ -56,16 +56,16 @@ public strictfp class RobotPlayer {
                 // 4: build() -> building traps
 
                 flagStuff(rc);
-                move(rc);
                 combat(rc);
+                move(rc);
                 build(rc);
                 
                 //this method is currently only used to add flags to shared array
-                map.updateMap(rc);
+                map.updateMap();
             }
 
             for(int i = 0; i <= 3; i++) {
-                indicator += "(" + sa.decodePrefix(rc.readSharedArray(i)) + ", " + sa.decodeLocation(rc.readSharedArray(i)) + ")";
+                indicator += "(" + sa.decodePrefix(i) + ", " + sa.decodeLocation(i) + ")";
             }
 
             rc.setIndicatorString(indicator);
@@ -77,8 +77,8 @@ public strictfp class RobotPlayer {
      * handles initializing all static fields
      */
     public static void init(RobotController rc) throws GameActionException {
-        map.setDimension(rc.getMapWidth(), rc.getMapHeight());
-        sa.setDimension(rc.getMapWidth(), rc.getMapHeight());
+        map.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
+        sa.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
         
         //assigning each duck an ID that is based off of when they move 
         //in a turn
@@ -90,11 +90,10 @@ public strictfp class RobotPlayer {
     }
 
     public static void flagStuff(RobotController rc) throws GameActionException {
-        
         //writes into the shared array the location of the target flag to get
         // ?potentially move into method that is just used for writing to shared array
         // ?if more things like this occur
-        if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
+        if(sa.decodePrefix(SA.enemyFlag) == 0) {
             if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
                 rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
             } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
@@ -103,18 +102,9 @@ public strictfp class RobotPlayer {
             }
         }
 
-        //pickup a friendly flag if it is not it's target location
-        if(rc.canPickupFlag(rc.getLocation())) {
-            if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
-                 rc.pickupFlag(rc.getLocation());
-            } else {
-                for(int i = SA.FLAG1; i <= SA.FLAG3; i++) {
-                    if(sa.decodeLocation(rc.readSharedArray(i)).equals(rc.getLocation())
-                        && sa.decodePrefix(rc.readSharedArray(i)) == 0) {
-                            rc.pickupFlag(rc.getLocation());
-                    }
-                }
-            }
+        //picks up enemy flags
+        if(rc.canPickupFlag(rc.getLocation()) && rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
+            rc.pickupFlag(rc.getLocation());
         }
 
         //creating escort for returning flags
@@ -179,29 +169,19 @@ public strictfp class RobotPlayer {
 
     /**
      * god this is a mess
-     * need a decision tree without all these fuck iffs 
+     * need a decision tree without all these fucking iffs 
      */
     private static MapLocation getTarget(RobotController rc) throws GameActionException {
         MapLocation target = null;
 
         if(hasMyFlag(rc)) {
-            if(sa.decodePrefix(rc.readSharedArray(SA.FLAG1)) == 0) {
-                target = sa.decodeLocation(rc.readSharedArray(0));
-            } else if(sa.decodePrefix(rc.readSharedArray(SA.FLAG2)) == 0) {
-                MapLocation loc = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
-                MapLocation flag1 = loc;
-                while(loc.distanceSquaredTo(flag1) <= 6) {
-                    loc.add(Direction.NORTH);
-                }
-            } else if(sa.decodePrefix(rc.readSharedArray(SA.FLAG3)) == 0) {
-                MapLocation loc = sa.decodeLocation(rc.readSharedArray(SA.FLAG2));
-                MapLocation flag1 = loc;
-                while(loc.distanceSquaredTo(flag1) <= 6) {
-                    loc.add(Direction.WEST);
-                }
-            }
-        } else if(rc.hasFlag()) {
-            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
+            //TODO: 
+            target = rc.getLocation();
+            return target;
+        } 
+        
+        if(rc.hasFlag()) {
+            target = sa.decodeLocation(SA.FLAG1);
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
             int min = 900;
             for(MapLocation spawn : spawnLocs) {
@@ -210,31 +190,42 @@ public strictfp class RobotPlayer {
                     target = spawn;
                 }
             }
-
-        } else if(ID <= 6) {
-            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
-            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
-                return target;
+            return target;
+        } 
+        
+        //for ducks that are defending the flags 
+        if(ID <= 18) {
+            int temp = (ID + 5) / 6;
+            int targetFlag = SA.FLAG1;
+            switch (temp) {
+                case 1:
+                    targetFlag = SA.FLAG1;
+                    break;
+                case 2: 
+                    targetFlag = SA.FLAG2;
+                    break;
+                case 3: 
+                    targetFlag = SA.FLAG3; 
+                    break;
             }
-        } else if(ID <= 12) {
-            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG2));
-            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
-                return target;
-            }
-        } else if(ID <= 18) {
-            target = sa.decodeLocation(rc.readSharedArray(SA.FLAG3));
-            if(rc.getLocation().distanceSquaredTo(target) <= 1) {
-                return target; 
-            }
-        } else if(rc.getRoundNum() < 200) {
+            target = sa.decodeLocation(targetFlag);
+            return target;
+        } 
+    
+        
+        if(rc.getRoundNum() < 200) {
             MapLocation[] locations = rc.senseNearbyCrumbs(-1);
             if(locations.length > 0) target = locations[0];
-        } else if(rc.readSharedArray(SA.escort) != 0 && ID <= 30) {
-            target = sa.decodeLocation(rc.readSharedArray(SA.escort));
-        } else {
-            target = sa.decodeLocation(rc.readSharedArray(SA.enemyFlag));
-        }
-
+            return target;
+        } 
+        
+        if(rc.readSharedArray(SA.escort) != 0 && ID <= 30) {
+            target = sa.decodeLocation(SA.escort);
+            return target;
+        } 
+        
+        
+        target = sa.decodeLocation(SA.enemyFlag);
         return target;
     }
 
@@ -245,9 +236,19 @@ public strictfp class RobotPlayer {
      */
     public static void combat(RobotController rc) throws GameActionException {
         //attacks any enemy robots it can
+        int minHealth = 1001;
+        MapLocation target = null;
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());   
         for(RobotInfo robot : enemyRobots) {
-            if(rc.canAttack(robot.getLocation())) rc.attack(robot.getLocation());
+            if(rc.canAttack(robot.getLocation()) 
+                && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
+                minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
+                target = robot.getLocation();
+            }
+        }
+
+        if(target != null) {
+            rc.attack(target);
         }
 
         //heals any friendly robots it  can

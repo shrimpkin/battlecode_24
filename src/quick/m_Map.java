@@ -22,10 +22,13 @@ public class m_Map {
     int num = 0;
     SA sa = new SA();
 
-    public void setDimension(int width, int height) {
+    RobotController rc;
+
+    public void setDimension(int width, int height, RobotController rc) {
+        this.rc = rc;
         this.width = width;
         this.height = height;
-        sa.setDimension(width, height);
+        sa.setDimension(width, height, rc);
     }
 
     public int getTerrain(MapLocation location) {
@@ -40,7 +43,7 @@ public class m_Map {
     /**
      * adds all visible terrain to the robots personal map
      */
-    public void updateMap(RobotController rc) throws GameActionException {
+    public void updateMap() throws GameActionException {
         // if(rc == null) return;
         // if(rc.senseNearbyMapInfos() == null) return;
 
@@ -56,7 +59,7 @@ public class m_Map {
         // }
 
         if(rc.readSharedArray(0) == 0 || rc.readSharedArray(1) == 0 || rc.readSharedArray(2) == 0) {
-            setFlags(rc);
+            setFlags();
         }
     }
 
@@ -71,13 +74,13 @@ public class m_Map {
     /**
      * A helper method that will add flags to the shared array if they haven't been yet
      */
-    private void setFlags(RobotController rc) throws GameActionException {
+    private void setFlags() throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1);
         for(FlagInfo flag : flags) {
             if(flag.getTeam() == rc.getTeam()) {
                 boolean in = false;
                 for(int i = 0; i <= 2; i++) {
-                    if(flag.getLocation().equals( sa.decodeLocation(rc.readSharedArray(i)))) {
+                    if(flag.getLocation().equals(sa.decodeLocation(i))) {
                         in = true;
                     }
                 }
@@ -97,7 +100,7 @@ public class m_Map {
     /**
      * reads all map locations from the shared array
      */
-    public void readMapFromShared(RobotController rc) throws GameActionException {
+    public void readMapFromShared() throws GameActionException {
         int index;
 
         if(rc.getRoundNum() < 200) index = SA.e_loc_start;
@@ -115,7 +118,7 @@ public class m_Map {
     /**
      * writes all visible map location to the shared array
      */
-    public void writeMapToShared(RobotController rc) throws GameActionException {
+    public void writeMapToShared() throws GameActionException {
         if(rc == null) return;
         if(rc.senseNearbyMapInfos() == null) return;
 
