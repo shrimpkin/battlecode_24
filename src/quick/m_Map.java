@@ -41,24 +41,23 @@ public class m_Map {
      * adds all visible terrain to the robots personal map
      */
     public void updateMap(RobotController rc) throws GameActionException {
-        if(rc == null) return;
-        if(rc.senseNearbyMapInfos() == null) return;
+        // if(rc == null) return;
+        // if(rc.senseNearbyMapInfos() == null) return;
 
-        MapInfo[] locations = rc.senseNearbyMapInfos();
+        // MapInfo[] locations = rc.senseNearbyMapInfos();
 
-        for(MapInfo info : locations) {
-            int terrain = 0; 
-            if(info.isWall()) terrain = WALL;
-            if(info.isWater()) terrain = WATER;
-            if(info.isPassable()) terrain = GRASS;
+        // for(MapInfo info : locations) {
+        //     int terrain = 0; 
+        //     if(info.isWall()) terrain = WALL;
+        //     if(info.isWater()) terrain = WATER;
+        //     if(info.isPassable()) terrain = GRASS;
             
-            this.setTerrain(info.getMapLocation(), terrain);
-        }
+        //     this.setTerrain(info.getMapLocation(), terrain);
+        // }
 
         if(rc.readSharedArray(0) == 0 || rc.readSharedArray(1) == 0 || rc.readSharedArray(2) == 0) {
             setFlags(rc);
         }
-
     }
 
     /**

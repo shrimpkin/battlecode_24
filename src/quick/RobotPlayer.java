@@ -1,6 +1,7 @@
 package quick;
 
 import battlecode.common.*;
+import battlecode.schema.GameFooter;
 import quick.pathfinding.AStar;
 import scala.util.Random;
 
@@ -44,39 +45,23 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
+                
+                flagStuff(rc);
                 indicator += sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) + " ";
-                if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
-                    if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
-                        rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
-                    } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
-                        MapLocation loc = rc.senseBroadcastFlagLocations()[0];
-                        rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
-                    }
-                }
-
-                // if(rc.canSenseLocation(sa.decodeLocation(rc.readSharedArray(SA.enemyFlag))) 
-                //     && rc.senseNearbyFlags(-1).length == 0) {
-                //     rc.writeSharedArray(SA.enemyFlag, 0);
-                // }
-
-                if(rc.canPickupFlag(rc.getLocation())) {
-                    rc.pickupFlag(rc.getLocation());
-                }
-
+                
                 indicator += move(rc);
                 combat(rc);
+                build(rc);
 
+                
                 map.updateMap(rc);
-                map.writeMapToShared(rc); 
-                map.readMapFromShared(rc);
                 
                 indicator += map.num;
             }
 
-            // for(int i = 0; i <= 3; i++) {
-            //     MapLocation loc = sa.decodeLocation(rc.readSharedArray(i));
-            //     indicator += "(" + loc.x + ", " + loc.y + ")";
-            // }
+            for(int i = 0; i <= 2; i++) {
+                indicator += "(" + sa.decodePrefix(rc.readSharedArray(i)) + ", " + sa.decodeLocation(rc.readSharedArray(i)) + ")";
+            }
 
             rc.setIndicatorString(indicator);
             Clock.yield();
@@ -100,6 +85,49 @@ public strictfp class RobotPlayer {
         }
     }
 
+    public static void flagStuff(RobotController rc) throws GameActionException {
+        //writes into the shared array the location of the target flag to get
+        if(sa.decodePrefix(rc.readSharedArray(SA.enemyFlag)) == 0) {
+            if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
+                rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+            } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
+                MapLocation loc = rc.senseBroadcastFlagLocations()[0];
+                rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
+            }
+        }
+
+        
+        if(rc.canPickupFlag(rc.getLocation())) {
+            if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
+                 rc.pickupFlag(rc.getLocation());
+            } else {
+                for(int i = SA.FLAG1; i <= SA.FLAG3; i++) {
+                    if(sa.decodeLocation(rc.readSharedArray(i)).equals(rc.getLocation())
+                        && sa.decodePrefix(rc.readSharedArray(i)) == 0) {
+                            rc.pickupFlag(rc.getLocation());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * true if carrying a flag for the team the robot is on
+     * @param rc
+     * @return
+     * @throws GameActionException
+     */
+    private static boolean hasMyFlag(RobotController rc) throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(-1);
+        for(FlagInfo flag : flags) {
+            if(flag.getLocation().equals(rc.getLocation())) {
+                return flag.getTeam() == rc.getTeam();
+            }
+        }
+
+        return false;
+    }
+
     public static MapLocation move(RobotController rc) throws GameActionException {
         
         MapLocation target = null;
@@ -107,7 +135,23 @@ public strictfp class RobotPlayer {
         Direction dir = directions[rng.nextInt(directions.length)];
         boolean hasFlag = rc.hasFlag();
         
-        if(hasFlag) {
+        if(hasMyFlag(rc)) {
+            if(sa.decodePrefix(rc.readSharedArray(SA.FLAG1)) == 0) {
+                target = sa.decodeLocation(rc.readSharedArray(0));
+            } else if(sa.decodePrefix(rc.readSharedArray(SA.FLAG2)) == 0) {
+                MapLocation loc = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
+                MapLocation flag1 = loc;
+                while(loc.distanceSquaredTo(flag1) <= 6) {
+                    loc.add(Direction.NORTH);
+                }
+            } else if(sa.decodePrefix(rc.readSharedArray(SA.FLAG3)) == 0) {
+                MapLocation loc = sa.decodeLocation(rc.readSharedArray(SA.FLAG2));
+                MapLocation flag1 = loc;
+                while(loc.distanceSquaredTo(flag1) <= 6) {
+                    loc.add(Direction.WEST);
+                }
+            }
+        } else if(hasFlag) {
             target = sa.decodeLocation(rc.readSharedArray(0));
         } else if(ID <= 6) {
             target = sa.decodeLocation(rc.readSharedArray(SA.FLAG1));
@@ -155,6 +199,17 @@ public strictfp class RobotPlayer {
             rc.writeSharedArray(SA.enemyFlag, 0);
         }
 
+        if(rc.hasFlag() && rc.getLocation().equals(target)) {
+            rc.dropFlag(target);
+            if(rc.readSharedArray(sa.decodePrefix(SA.FLAG1)) == 0) {
+                rc.writeSharedArray(SA.FLAG1, sa.encode(target, 1));
+            } else if(rc.readSharedArray(sa.decodePrefix(SA.FLAG2)) == 0) {
+                rc.writeSharedArray(SA.FLAG2, sa.encode(target, 1));
+            } else {
+                rc.writeSharedArray(SA.FLAG3, sa.encode(target, 1));
+            }
+        }
+
         return target;
     }
 
@@ -196,6 +251,12 @@ public strictfp class RobotPlayer {
         if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) {
             System.out.println("Healing Upgraded");
             rc.buyGlobal(GlobalUpgrade.HEALING);
+        }
+    }
+
+    public static void build(RobotController rc) throws GameActionException {
+        if( ID <= 18 && rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+            rc.build(TrapType.EXPLOSIVE, rc.getLocation());
         }
     }
 }
