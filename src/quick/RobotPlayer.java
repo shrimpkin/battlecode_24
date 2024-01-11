@@ -1,7 +1,7 @@
 package quick;
 
 import battlecode.common.*;
-import quick.pathfinding.AStar;
+import quick.pathfinding.*;
 import scala.util.Random;
 
 /**
@@ -78,6 +78,7 @@ public strictfp class RobotPlayer {
     public static void init() throws GameActionException {
         map.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
         sa.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
+        Pathfinding.init(rc);
         
         //assigning each duck an ID that is based off of when they move 
         //in a turn
@@ -95,7 +96,7 @@ public strictfp class RobotPlayer {
         if(sa.decodePrefix(SA.enemyFlag) == 0) {
             if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
                 rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
-            } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
+            } else if(rc.readSharedArray(SA.enemyFlag) == 0 || rc.getRoundNum() == 100) {
                 if(rc.senseBroadcastFlagLocations().length != 0) {
                     MapLocation loc = rc.senseBroadcastFlagLocations()[0];
                     rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
@@ -143,20 +144,28 @@ public strictfp class RobotPlayer {
         Direction dir = directions[rng.nextInt(directions.length)];
         boolean hasFlag = rc.hasFlag();
 
-        Direction astar = Direction.CENTER;
+        // Direction astar = Direction.CENTER;
+        // if(target != null) {
+            
+        //     //how we deal with water currently
+        //     
+
+        //     astar = AStar.getBestDirection(rc, target);
+        // }
+
+        // if(astar != Direction.CENTER && rc.canMove(astar)) rc.move(astar);
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
-            
-            //how we deal with water currently
+
             if(rc.canFill(rc.getLocation().add(towards))) {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            astar = AStar.getBestDirection(rc, target);
+            Pathfinding.initTurn();
+            Pathfinding.move(target);
         }
-
-        if(astar != Direction.CENTER && rc.canMove(astar)) rc.move(astar);
-        if(rc.canMove(dir)) rc.move(dir);
+        
+        //if(rc.canMove(dir)) rc.move(dir);
         
         //updating shared array that a flag was dropped off during 
         //this robots movement
@@ -197,16 +206,17 @@ public strictfp class RobotPlayer {
 
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if(enemies.length > 0) {
-            if(rc.getHealth() < 300) {
+            if(rc.getHealth() < 800) {
                 target = rc.getLocation().add(rc.getLocation().directionTo(enemies[0].location).opposite());
             } else {
                 target = rc.getLocation().add(rc.getLocation().directionTo(enemies[0].location));
             }
+            return target;
         }
         
         //for ducks that are defending the flags 
-        if(ID <= 18) {
-            int temp = (ID + 5) / 6;
+        if(ID <= 3) {
+            int temp = ID;
             int targetFlag = SA.FLAG1;
             switch (temp) {
                 case 1:
@@ -219,9 +229,22 @@ public strictfp class RobotPlayer {
                     targetFlag = SA.FLAG3; 
                     break;
             }
+            
+            //adding defenses if we sense enemey robots
             target = sa.decodeLocation(targetFlag);
+            if(rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length != 0) {
+                rc.writeSharedArray(SA.defend, sa.encode(sa.decodeLocation(targetFlag), 1) );
+            } else if(sa.decodePrefix(targetFlag) == 1) {
+                rc.writeSharedArray(SA.defend, 0);
+            }
+
             return target;
         } 
+
+        if(ID <= 18 && sa.decodePrefix(SA.defend) == 1) {
+            target = sa.decodeLocation(SA.defend);
+            return target;
+        }
     
         
         if(rc.getRoundNum() < 200) {
@@ -288,8 +311,8 @@ public strictfp class RobotPlayer {
      * Currently just goes for explosive traps 
      */
     public static void build() throws GameActionException {
-        if( ID <= 18 && rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-            rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+        if(ID <= 18 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
+            rc.build(TrapType.STUN, rc.getLocation());
         }
     }
 }

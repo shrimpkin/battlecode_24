@@ -52,6 +52,15 @@ public class AStar {
             return Direction.CENTER;
         }
 
+        //this is terrible
+        if(rc.getLocation().distanceSquaredTo(target) >= 16) {
+            MapLocation t1 = rc.getLocation().add(rc.getLocation().directionTo(target));
+            MapLocation t2 = t1.add(t1.directionTo(target));
+            MapLocation t3 = t2.add(t2.directionTo(target));
+            MapLocation t4 = t3.add(t3.directionTo(target));
+            target = t4;
+        }
+
         // java.util.PriorityQueue<MapNode> open = new java.util.PriorityQueue<MapNode>();
         // java.util.PriorityQueue<MapNode> closed = new java.util.PriorityQueue<MapNode>();
         PriorityQueue open = new PriorityQueue();
