@@ -1,7 +1,6 @@
 package quick;
 
 import battlecode.common.*;
-import battlecode.schema.GameFooter;
 import quick.pathfinding.AStar;
 import scala.util.Random;
 
@@ -18,7 +17,10 @@ public strictfp class RobotPlayer {
     static int ID = 0;
 
     static final Random rng = new Random(6147);
+
+    //string used for debugging purposes
     static String indicator; 
+    static RobotController rc;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -32,15 +34,17 @@ public strictfp class RobotPlayer {
         Direction.NORTHWEST,
     };
 
-    public static void run(RobotController rc) throws GameActionException {
+    public static void run(RobotController m_rc) throws GameActionException {
+        rc = m_rc;
+
         while(true) {
             //used for debugging, only value that should be passed through rc.setIndicator
             //can be seen by hovering over robot
             indicator = ID + ": ";
 
-            if(rc.getRoundNum() % 750 == 0) globals(rc);
-            if(rc.getRoundNum() == 1) init(rc);
-                
+            if(rc.getRoundNum() == 1) init();
+            if(rc.getRoundNum() % 750 == 0) globals();
+
             if(!rc.isSpawned()) {
                 MapLocation[] spawnLocs = rc.getAllySpawnLocations();
                 
@@ -48,24 +52,19 @@ public strictfp class RobotPlayer {
                     if (rc.canSpawn(spawn)) rc.spawn(spawn);
                 }
             } else {
-
                 //each turn we cycle through:  
                 // 1: flagStuff() -> determines whether to pick up flags
                 // 2: move() -> determines where the robot should move
                 // 3: combat() -> attacks enemies
                 // 4: build() -> building traps
 
-                flagStuff(rc);
-                combat(rc);
-                move(rc);
-                build(rc);
+                flagStuff();
+                combat();
+                move();
+                build();
                 
                 //this method is currently only used to add flags to shared array
                 map.updateMap();
-            }
-
-            for(int i = 0; i <= 3; i++) {
-                indicator += "(" + sa.decodePrefix(i) + ", " + sa.decodeLocation(i) + ")";
             }
 
             rc.setIndicatorString(indicator);
@@ -76,7 +75,7 @@ public strictfp class RobotPlayer {
     /**
      * handles initializing all static fields
      */
-    public static void init(RobotController rc) throws GameActionException {
+    public static void init() throws GameActionException {
         map.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
         sa.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
         
@@ -89,7 +88,7 @@ public strictfp class RobotPlayer {
         }
     }
 
-    public static void flagStuff(RobotController rc) throws GameActionException {
+    public static void flagStuff() throws GameActionException {
         //writes into the shared array the location of the target flag to get
         // ?potentially move into method that is just used for writing to shared array
         // ?if more things like this occur
@@ -97,8 +96,10 @@ public strictfp class RobotPlayer {
             if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
                 rc.writeSharedArray(SA.enemyFlag, sa.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
             } else if(rc.readSharedArray(SA.enemyFlag) == 0) {
-                MapLocation loc = rc.senseBroadcastFlagLocations()[0];
-                rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
+                if(rc.senseBroadcastFlagLocations().length != 0) {
+                    MapLocation loc = rc.senseBroadcastFlagLocations()[0];
+                    rc.writeSharedArray(SA.enemyFlag, sa.encode(loc, 0));
+                }
             }
         }
 
@@ -108,7 +109,7 @@ public strictfp class RobotPlayer {
         }
 
         //creating escort for returning flags
-        if(rc.hasFlag() && !hasMyFlag(rc)) {
+        if(rc.hasFlag() && !hasMyFlag()) {
             rc.writeSharedArray(SA.escort, sa.encode(rc.getLocation(), 1));
         }
     }
@@ -116,7 +117,7 @@ public strictfp class RobotPlayer {
     /**
      * @return true if carrying a flag for the team the robot is on
      */
-    private static boolean hasMyFlag(RobotController rc) throws GameActionException {
+    private static boolean hasMyFlag() throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1);
         for(FlagInfo flag : flags) {
             if(flag.getLocation().equals(rc.getLocation())) {
@@ -134,9 +135,9 @@ public strictfp class RobotPlayer {
      * @return
      * @throws GameActionException
      */
-    public static MapLocation move(RobotController rc) throws GameActionException {
+    public static MapLocation move() throws GameActionException {
         //this will be where we attempt to move
-        MapLocation target = getTarget(rc);
+        MapLocation target = getTarget();
 
         //used as random movement if we don't have a target
         Direction dir = directions[rng.nextInt(directions.length)];
@@ -171,15 +172,16 @@ public strictfp class RobotPlayer {
      * god this is a mess
      * need a decision tree without all these fucking iffs 
      */
-    private static MapLocation getTarget(RobotController rc) throws GameActionException {
+    private static MapLocation getTarget() throws GameActionException {
         MapLocation target = null;
 
-        if(hasMyFlag(rc)) {
+        if(hasMyFlag()) {
             //TODO: 
             target = rc.getLocation();
             return target;
         } 
         
+        //attempts to return flag to closest spawn location
         if(rc.hasFlag()) {
             target = sa.decodeLocation(SA.FLAG1);
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
@@ -192,6 +194,15 @@ public strictfp class RobotPlayer {
             }
             return target;
         } 
+
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        if(enemies.length > 0) {
+            if(rc.getHealth() < 300) {
+                target = rc.getLocation().add(rc.getLocation().directionTo(enemies[0].location).opposite());
+            } else {
+                target = rc.getLocation().add(rc.getLocation().directionTo(enemies[0].location));
+            }
+        }
         
         //for ducks that are defending the flags 
         if(ID <= 18) {
@@ -216,6 +227,10 @@ public strictfp class RobotPlayer {
         if(rc.getRoundNum() < 200) {
             MapLocation[] locations = rc.senseNearbyCrumbs(-1);
             if(locations.length > 0) target = locations[0];
+
+            if(target == null && rc.getRoundNum() > 175) {
+                target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            }
             return target;
         } 
         
@@ -234,7 +249,7 @@ public strictfp class RobotPlayer {
      * @param rc
      * @throws GameActionException
      */
-    public static void combat(RobotController rc) throws GameActionException {
+    public static void combat() throws GameActionException {
         //attacks any enemy robots it can
         int minHealth = 1001;
         MapLocation target = null;
@@ -263,7 +278,7 @@ public strictfp class RobotPlayer {
      * Buys Action at turn 750
      * Buys Healing at turn 1500
      */
-    public static void globals(RobotController rc) throws GameActionException {
+    public static void globals() throws GameActionException {
         if(rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
         if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
     }
@@ -272,7 +287,7 @@ public strictfp class RobotPlayer {
      * Determines if the robot should build, and what it should build
      * Currently just goes for explosive traps 
      */
-    public static void build(RobotController rc) throws GameActionException {
+    public static void build() throws GameActionException {
         if( ID <= 18 && rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
             rc.build(TrapType.EXPLOSIVE, rc.getLocation());
         }

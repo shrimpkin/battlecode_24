@@ -58,17 +58,11 @@ public class m_Map {
         //     this.setTerrain(info.getMapLocation(), terrain);
         // }
 
-        if(rc.readSharedArray(0) == 0 || rc.readSharedArray(1) == 0 || rc.readSharedArray(2) == 0) {
+        if(rc.readSharedArray(SA.FLAG1) == 0 
+            || rc.readSharedArray(SA.FLAG2) == 0 
+            || rc.readSharedArray(SA.FLAG3) == 0) {
             setFlags();
         }
-    }
-
-    /**
-     * helper method that will set symetry if can be determined
-     * TODO
-     */
-    private void determineSymetry(RobotController rc) throws GameActionException {
-
     }
 
     /**
