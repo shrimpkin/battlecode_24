@@ -189,6 +189,7 @@ public strictfp class RobotPlayer {
             return target;
         } 
         
+        //TODO this if controls defense, maybe add more ducks, mess around with it
         //for ducks that are defending the flags 
         if(ID <= 3) {
             int temp = ID;
@@ -251,9 +252,13 @@ public strictfp class RobotPlayer {
         return target;
     }
 
+    /**
+     * Choosing movement target and attacking 
+     * TODO: experiment with different micro patterns
+     * @return
+     * @throws GameActionException
+     */
     public static MapLocation getCombatTarget() throws GameActionException {
-        
-
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         RobotInfo[] friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation target = null;
@@ -343,6 +348,7 @@ public strictfp class RobotPlayer {
     /**
      * Determines if the robot should build, and what it should build
      * Currently just goes for explosive traps 
+     * TODO: Mess around with this, try other traps or a mixture potentially 
      */
     public static void build() throws GameActionException {
         if(ID <= 18 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
