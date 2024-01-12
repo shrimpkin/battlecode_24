@@ -33,7 +33,7 @@ public class Combat {
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs > 0 || (numFriendlies + 1 < numEnemiesAttackingUs);
+        return numEnemiesAttackingUs > 0 || (numFriendlies + 1 < numEnemiesAttackingUs) || rc.getHealth() < 600;
     }
 
     /**
