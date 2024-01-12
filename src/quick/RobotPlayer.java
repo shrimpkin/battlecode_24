@@ -351,8 +351,26 @@ public strictfp class RobotPlayer {
      * TODO: Mess around with this, try other traps or a mixture potentially 
      */
     public static void build() throws GameActionException {
-        if(ID <= 18 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
-            rc.build(TrapType.STUN, rc.getLocation());
+        int numTraps = 0;
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        for(MapInfo info : mapInfo) {
+            if(info.getTrapType() != TrapType.NONE) {
+                numTraps++;
+            }
         }
+
+        if(numTraps <= 10) {
+            
+            if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+            }
+        } 
+
+        if(rc.getLocation().x % 3 == 0 && rc.getLocation().y % 3 == 0) {
+            if(rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                rc.build(TrapType.STUN, rc.getLocation());
+            }
+        }
+        
     }
 }
