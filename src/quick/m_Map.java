@@ -20,7 +20,6 @@ public class m_Map {
     private int[][] terrain = new int[60][60];
     int width, height;
     int num = 0;
-    SA sa = new SA();
 
     RobotController rc;
 
@@ -28,7 +27,7 @@ public class m_Map {
         this.rc = rc;
         this.width = width;
         this.height = height;
-        sa.setDimension(width, height, rc);
+        SA.init(width, height, rc);
     }
 
     public int getTerrain(MapLocation location) {
@@ -74,7 +73,7 @@ public class m_Map {
             if(flag.getTeam() == rc.getTeam()) {
                 boolean in = false;
                 for(int i = 0; i <= 2; i++) {
-                    if(flag.getLocation().equals(sa.decodeLocation(i))) {
+                    if(flag.getLocation().equals(SA.getLocation(i))) {
                         in = true;
                     }
                 }
@@ -82,7 +81,7 @@ public class m_Map {
                 if(!in) {
                     for(int i = 0; i <= 2; i++) {
                         if(rc.readSharedArray(i) == 0) {
-                            rc.writeSharedArray(i, sa.encode(flag.getLocation(), 0));
+                            rc.writeSharedArray(i, SA.encode(flag.getLocation(), 0));
                             break;
                         }
                     }
@@ -103,7 +102,7 @@ public class m_Map {
         while(true) {
             int value = rc.readSharedArray(index);
 
-            this.setTerrain(sa.decodeLocation(value), sa.decodePrefix(value));
+            this.setTerrain(SA.getLocation(value), SA.getPrefix(value));
             index++;
             if(index == 64) break;
         }
@@ -129,7 +128,7 @@ public class m_Map {
             else if(info.isPassable()) terrain = GRASS;
             else terrain = DAM;
             
-           int enc = sa.encode(info.getMapLocation(), terrain);
+           int enc = SA.encode(info.getMapLocation(), terrain);
 
             rc.writeSharedArray(index, enc);
             index++;

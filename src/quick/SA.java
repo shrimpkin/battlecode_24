@@ -25,22 +25,28 @@ public class SA {
     public static int defend = 6;
     public static int f_loc_start = 56;
 
-    RobotController rc;
+    static RobotController rc;
     
 
-    int width, height;
+    static int width, height;
 
-    public void setDimension(int width, int height, RobotController rc) {
-        this.width = width;
-        this.height = height;
-        this.rc = rc;
+    /**
+     * Init shared array
+     * @param w width of the map
+     * @param h height of the map
+     * @param r robotcontroller
+     */
+    public static void init(int w, int h, RobotController r) {
+        width = w;
+        height = h;
+        rc = r;
     }
 
     /**
      * @param value a number obtained from the shared array, by using the encode method
      * @return the map location that was encoded
      */
-    public MapLocation decodeLocation(int index) throws GameActionException {
+    public static MapLocation getLocation(int index) throws GameActionException {
         int value = rc.readSharedArray(index);
 
         value /= 10;
@@ -55,7 +61,7 @@ public class SA {
      * @param value a number obtained from the shared array, by using the encode method
      * @return the prefix that was encoded
      */
-    public int decodePrefix(int index) throws GameActionException {
+    public static int getPrefix(int index) throws GameActionException {
         int value = rc.readSharedArray(index);
         return value % 10;
     }
@@ -69,7 +75,7 @@ public class SA {
      * @param prefix
      * @return the integer to be written into the shared array
      */
-    public int encode(MapLocation location, int prefix) {
+    public static int encode(MapLocation location, int prefix) {
         return prefix + 10* (location.x + location.y * width);
     }
 }
