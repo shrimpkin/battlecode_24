@@ -12,6 +12,10 @@ public class Combat {
 
     static RobotInfo[] enemies;
     static RobotInfo[] friendlies;
+    static String indicator;
+
+    static MapLocation averageEnemy;
+    static MapLocation averageTrap;
 
     static final Direction[] directions = {
         Direction.NORTH,
@@ -26,6 +30,7 @@ public class Combat {
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
+        indicator = "";
     }
 
 
@@ -36,6 +41,25 @@ public class Combat {
         return numEnemiesAttackingUs > 0 || (numFriendlies + 1 < numEnemiesAttackingUs) || rc.getHealth() < 600;
     }
 
+    /**
+     * Should the robot attempt to make the enemies walk into the traps
+     */
+    public static boolean shouldTrap() throws GameActionException {
+        if(averageTrap == null) {
+            indicator += "t: N";
+        } else {
+            indicator += "t: " + averageTrap;
+        }
+
+        indicator += "e: " + enemies.length + " ";
+        return averageTrap != null && enemies.length >= 3;
+    }
+
+    public static void reset() throws GameActionException {
+        indicator = "";
+        resetShouldRunAway();
+        resetShouldTrap();
+    }
     /**
      * resets all constants used in the decision of whether to run away
      * @throws GameActionException
@@ -54,6 +78,58 @@ public class Combat {
                 numEnemiesAttackingUs++;
             }
         }
+    }
+
+
+    /**
+     * Updates average trap and enemy locations
+     * @throws GameActionException
+     */
+    public static void resetShouldTrap() throws GameActionException {
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        
+        double averageTrap_x = 0;
+        double averageTrap_y = 0;
+
+        double numTraps = 0;
+
+        for(MapInfo info : mapInfo) {
+            if(!info.getTrapType().equals(TrapType.NONE)) {
+                averageTrap_x += info.getMapLocation().x;
+                averageTrap_y += info.getMapLocation().y;
+                numTraps++;
+            }
+        }
+
+        if(numTraps == 0) {
+            averageTrap = null;
+            return;
+        }
+
+        averageTrap_x /= numTraps;
+        averageTrap_y /= numTraps;
+
+        double averageEnemy_x = 0;
+        double averageEnemy_y = 0;
+
+        for(RobotInfo robot : enemies) {
+            averageEnemy_x += robot.getLocation().x;
+            averageEnemy_y += robot.getLocation().y;
+        }
+
+        averageEnemy_x /= enemies.length;
+        averageEnemy_y /= enemies.length;
+
+        averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
+        averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
+        
+    }
+
+    /**
+     *  Gets the direction that result in the robot being behind traps
+     */
+    public static Direction getTrapDirection() throws GameActionException{
+        return averageEnemy.directionTo(averageTrap);
     }
 
     /**

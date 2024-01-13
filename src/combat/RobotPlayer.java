@@ -279,29 +279,35 @@ public strictfp class RobotPlayer {
      */
     public static MapLocation getCombatTarget() throws GameActionException {
         build();
-        Combat.resetShouldRunAway();
+        Combat.reset();
         boolean shouldRun = Combat.shouldRunAway();
-        if(rc.getRoundNum() <= 210 && rc.getRoundNum() >= 200) {
-            shouldRun = true;
-        }
+        boolean shouldTrap = Combat.shouldTrap();
 
         Direction dir;
-        if(shouldRun) {
+
+        if(shouldTrap) {
+            indicator += "TRAP ";
+            dir = Combat.getTrapDirection();
+        } else if(shouldRun) {
+            indicator += "DEF";
             dir = Combat.getDefensiveDirection();
         } else {
+            indicator += "OFF";
             dir = Combat.getOffensiveDirection();
         }
 
         if(dir == null) dir = Direction.CENTER;
 
         MapLocation targetLocation = rc.getLocation().add(dir);
-        if(shouldRun) {
+        if(shouldRun || shouldTrap) {
             Combat.attack();
             if(rc.canMove(dir)) rc.move(dir);
         } else {
             if(rc.canMove(dir)) rc.move(dir);
             Combat.attack();
         }
+
+        indicator += Combat.indicator;
 
         return targetLocation;
     }

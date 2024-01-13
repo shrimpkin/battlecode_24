@@ -57,7 +57,7 @@ public class Pathfinding {
         if (!rc.isMovementReady()) return;
         target = loc;
         if (!BugNav.move()) greedyPath();
-        BugNav.move();
+        //BugNav.move();
     }
 
     static final double eps = 1e-5;
