@@ -1,4 +1,4 @@
-package combat;
+package combat_for_test;
 
 import battlecode.common.*;
 import scala.util.Random;
@@ -54,7 +54,7 @@ public strictfp class RobotPlayer {
 
                 //runs the combat loop if there are enemies 
                 move();
-                //build();
+                build();
                 
                 //this method is currently only used to add flags to shared array
                 map.updateMap();
@@ -135,13 +135,9 @@ public strictfp class RobotPlayer {
         //this will be where we attempt to move
         if(rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length != 0 && !rc.hasFlag()) {
             target = getCombatTarget();
-            indicator += "c: " + target + "\n";
-            return target;
-        } 
-        
-        indicator += "t: ";
-        target = getTarget();
-        
+        } else {
+           target = getTarget();
+        }
          
 
         //used as random movement if we don't have a target
@@ -167,7 +163,7 @@ public strictfp class RobotPlayer {
             rc.writeSharedArray(SA.enemyFlag, 0);
             rc.writeSharedArray(SA.escort, 0);
         }
-        indicator += target + "\n";
+        indicator += "t: " + target + "\n";
         return target;
     }
 
@@ -261,9 +257,10 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static MapLocation getCombatTarget() throws GameActionException {
-        build();
         Combat.resetShouldRunAway();
         
+        Combat.attack();
+
         Direction dir;
         if(Combat.shouldRunAway()) {
             dir = Combat.getDefensiveDirection();
@@ -273,16 +270,7 @@ public strictfp class RobotPlayer {
 
         if(dir == null) dir = Direction.CENTER;
 
-        MapLocation targetLocation = rc.getLocation().add(dir);
-        if(Combat.shouldRunAway()) {
-            Combat.attack();
-            if(rc.canMove(dir)) rc.move(dir);
-        } else {
-            if(rc.canMove(dir)) rc.move(dir);
-            Combat.attack();
-        }
-
-        return targetLocation;
+        return rc.getLocation().add(dir);
     }
 
 
@@ -310,18 +298,18 @@ public strictfp class RobotPlayer {
             }
         }
 
-        if(numTraps <= rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length) {
+        if(numTraps <= 10) {
             
             if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         } 
 
-        // if(rc.getLocation().x % 3 == 0 && rc.getLocation().y % 3 == 0) {
-        //     if(rc.canBuild(TrapType.STUN, rc.getLocation())) {
-        //         rc.build(TrapType.STUN, rc.getLocation());
-        //     }
-        // }
+        if(rc.getLocation().x % 3 == 0 && rc.getLocation().y % 3 == 0) {
+            if(rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                rc.build(TrapType.STUN, rc.getLocation());
+            }
+        }
         
     }
 }
