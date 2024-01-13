@@ -54,6 +54,7 @@ public strictfp class RobotPlayer {
 
                 //runs the combat loop if there are enemies 
                 move();
+
                 //build();
                 
                 //this method is currently only used to add flags to shared array
@@ -85,12 +86,24 @@ public strictfp class RobotPlayer {
     }
 
     public static void flagStuff() throws GameActionException {
+        FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
+
+        if(rc.canSenseLocation(SA.getLocation(SA.enemyFlag)) && nearbyFlags.length == 0) {
+            rc.writeSharedArray(SA.enemyFlag, 0);
+        }
         //writes into the shared array the location of the target flag to get
         // ?potentially move into method that is just used for writing to shared array
         // ?if more things like this occur
+
         if(SA.getPrefix(SA.enemyFlag) == 0) {
-            if(rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
-                rc.writeSharedArray(SA.enemyFlag, SA.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+            
+            if(nearbyFlags.length > 0) {
+                RobotInfo info = rc.senseRobotAtLocation(nearbyFlags[0].getLocation());
+                
+                if(info == null || info.getTeam().equals(rc.getTeam().opponent())) {
+                    rc.writeSharedArray(SA.enemyFlag, SA.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+                }
+
             } else if(rc.readSharedArray(SA.enemyFlag) == 0 || rc.getRoundNum() % 100 == 0) {
                 if(rc.senseBroadcastFlagLocations().length != 0) {
                     int index = rng.nextInt(rc.senseBroadcastFlagLocations().length);
@@ -100,9 +113,14 @@ public strictfp class RobotPlayer {
             }
         }
 
+        
+
         //picks up enemy flags
         if(rc.canPickupFlag(rc.getLocation()) && rc.senseNearbyFlags(-1, rc.getTeam().opponent()).length > 0) {
             rc.pickupFlag(rc.getLocation());
+            if(rc.getLocation().equals(SA.getLocation(SA.enemyFlag))) {
+                rc.writeSharedArray(SA.enemyFlag, 0);
+            }
         }
 
         //creating escort for returning flags
@@ -245,11 +263,10 @@ public strictfp class RobotPlayer {
             return target;
         } 
         
-        if(rc.readSharedArray(SA.escort) != 0 && ID <= 30) {
+        if(rc.readSharedArray(SA.escort) != 0 && ID >= 40) {
             target = SA.getLocation(SA.escort);
             return target;
         } 
-        
         
         target = SA.getLocation(SA.enemyFlag);
         return target;
@@ -263,9 +280,13 @@ public strictfp class RobotPlayer {
     public static MapLocation getCombatTarget() throws GameActionException {
         build();
         Combat.resetShouldRunAway();
-        
+        boolean shouldRun = Combat.shouldRunAway();
+        if(rc.getRoundNum() <= 210 && rc.getRoundNum() >= 200) {
+            shouldRun = true;
+        }
+
         Direction dir;
-        if(Combat.shouldRunAway()) {
+        if(shouldRun) {
             dir = Combat.getDefensiveDirection();
         } else {
             dir = Combat.getOffensiveDirection();
@@ -274,7 +295,7 @@ public strictfp class RobotPlayer {
         if(dir == null) dir = Direction.CENTER;
 
         MapLocation targetLocation = rc.getLocation().add(dir);
-        if(Combat.shouldRunAway()) {
+        if(shouldRun) {
             Combat.attack();
             if(rc.canMove(dir)) rc.move(dir);
         } else {

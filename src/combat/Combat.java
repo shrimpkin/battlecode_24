@@ -92,19 +92,22 @@ public class Combat {
     public static Direction getOffensiveDirection() throws GameActionException {
         Direction[] dirsToConsider = directions;
         Direction bestDirectionSoFar = Direction.CENTER;
+        int minEnemies = Integer.MAX_VALUE;
 
         for(Direction dir : dirsToConsider) {
             if(rc.canMove(dir)) {
+                int numEnemies = 0;
                 MapLocation targetLocation = rc.getLocation().add(dir);
-                int minHealth = Integer.MAX_VALUE;
 
                 for(RobotInfo enemy : enemies) {
                     if(targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        if(enemy.getHealth() < minHealth) {
-                            minHealth = enemy.getHealth();
-                            bestDirectionSoFar = dir;
-                        }
+                        numEnemies++;
                     }
+                }
+
+                if(numEnemies > 0 && numEnemies < minEnemies) {
+                    bestDirectionSoFar = dir;
+                    minEnemies = numEnemies;
                 }
             }
         }
