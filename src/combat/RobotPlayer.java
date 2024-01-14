@@ -43,24 +43,21 @@ public strictfp class RobotPlayer {
             if(rc.getRoundNum() == 1) init();
             if(rc.getRoundNum() % 750 == 0) globals();
 
+            //tries to spawn in the robot if we can
             if(!rc.isSpawned()) {
-                MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+                spawn();
                 
-                for(MapLocation spawn : spawnLocs) {
-                    if (rc.canSpawn(spawn)) rc.spawn(spawn);
-                }
-            } else {
+            } 
+
+            //actions to perform if we are spawned in, or just got spawned in
+            if(rc.isSpawned()) {
                 flagStuff();
-
-                //runs the combat loop if there are enemies 
                 move();
-
-                //build();
-                
-                //this method is currently only used to add flags to shared array
+                    
+                //this method is currently only used to add flags to shared array   
                 map.updateMap();
             }
-
+            
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
@@ -82,6 +79,37 @@ public strictfp class RobotPlayer {
         ID = rc.readSharedArray(3);
         if(rc.readSharedArray(3) == 50) {
             rc.writeSharedArray(3, 0);
+        }
+    }
+
+    /**
+     * 
+     */
+    public static void spawn() throws GameActionException {
+        MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+        indicator += "SPAWN ";
+
+        if(rc.readSharedArray(SA.defend) != 0) {
+            indicator += "DEF";
+            MapLocation target = SA.getLocation(SA.defend);
+
+            for(MapLocation spawn : spawnLocs) {
+                //2 makes sure it is in the square around the flag
+                if(spawn.distanceSquaredTo(target) < 2) {
+                    if(rc.canSpawn(spawn)) {
+                        rc.spawn(spawn);
+                        return;
+                    }    
+                }
+            }
+        }
+
+        for(MapLocation spawn : spawnLocs) {
+            indicator += "RND ";
+            if (rc.canSpawn(spawn)) {
+                rc.spawn(spawn);
+                return;
+            }
         }
     }
 
@@ -153,6 +181,28 @@ public strictfp class RobotPlayer {
         //this will be where we attempt to move
         if(rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length != 0 && !rc.hasFlag()) {
             target = getCombatTarget();
+            if(ID <= 3) {
+                int targetFlag = SA.FLAG1;
+                switch (ID) {
+                    case 1:
+                        targetFlag = SA.FLAG1;
+                        break;
+                    case 2: 
+                        targetFlag = SA.FLAG2;
+                        break;
+                    case 3: 
+                        targetFlag = SA.FLAG3; 
+                        break;
+                }
+
+                //adding defenses if we sense enemy robots
+                if(rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length != 0) {
+                    indicator += "HELP ";
+                    rc.writeSharedArray(SA.defend, SA.encode(SA.getLocation(targetFlag), 1) );
+                } else if(SA.getPrefix(targetFlag) == 1) {
+                    rc.writeSharedArray(SA.defend, 0);
+                }
+            }
             indicator += "c: " + target + "\n";
             return target;
         } 
@@ -233,12 +283,7 @@ public strictfp class RobotPlayer {
                 if(rc.canPickupFlag(target)) rc.pickupFlag(target);
             }
             
-            //adding defenses if we sense enemy robots
-            if(rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length != 0) {
-                rc.writeSharedArray(SA.defend, SA.encode(SA.getLocation(targetFlag), 1) );
-            } else if(SA.getPrefix(targetFlag) == 1) {
-                rc.writeSharedArray(SA.defend, 0);
-            }
+            
 
             if(rc.hasFlag()) {
                 //TODO implement some sort of flag condensing 
@@ -337,7 +382,7 @@ public strictfp class RobotPlayer {
             }
         }
 
-        if(numTraps <= rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length) {
+        if(numTraps * 3 <= rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length) {
             
             if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
