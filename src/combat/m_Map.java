@@ -40,23 +40,9 @@ public class m_Map {
     }
 
     /**
-     * adds all visible terrain to the robots personal map
+     * adds flags into shared array
      */
     public void updateMap() throws GameActionException {
-        // if(rc == null) return;
-        // if(rc.senseNearbyMapInfos() == null) return;
-
-        // MapInfo[] locations = rc.senseNearbyMapInfos();
-
-        // for(MapInfo info : locations) {
-        //     int terrain = 0; 
-        //     if(info.isWall()) terrain = WALL;
-        //     if(info.isWater()) terrain = WATER;
-        //     if(info.isPassable()) terrain = GRASS;
-            
-        //     this.setTerrain(info.getMapLocation(), terrain);
-        // }
-
         if(rc.readSharedArray(SA.FLAG1) == 0 
             || rc.readSharedArray(SA.FLAG2) == 0 
             || rc.readSharedArray(SA.FLAG3) == 0) {
