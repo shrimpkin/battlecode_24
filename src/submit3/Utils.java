@@ -1,7 +1,12 @@
 package submit3;
 
-import battlecode.common.*;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 import scala.util.Random;
+
+import java.util.Map;
 
 public class Utils {
     static RobotController rc; 
@@ -44,5 +49,22 @@ public class Utils {
     public static Direction randomDirection() throws GameActionException {
         return directions[rng.nextInt(directions.length)]; 
     }
-}
 
+    public static MapLocation[] corners(MapLocation pos){
+        return new MapLocation[]{
+                pos.add(Direction.SOUTHEAST),
+                pos.add(Direction.SOUTHWEST),
+                pos.add(Direction.NORTHWEST),
+                pos.add(Direction.NORTHEAST)
+        };
+    }
+
+    public static MapLocation[] cardinals(MapLocation pos){
+        return new MapLocation[]{
+                pos.add(Direction.NORTH),
+                pos.add(Direction.SOUTH),
+                pos.add(Direction.EAST),
+                pos.add(Direction.WEST)
+        };
+    }
+}

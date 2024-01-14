@@ -1,13 +1,6 @@
 package submit3;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapInfo;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.TrapType;
+import battlecode.common.*;
 
 public class Combat {
     static RobotController rc;
