@@ -1,5 +1,6 @@
 package combat;
 
+import battlecode.common.FlagInfo;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -18,7 +19,7 @@ public class SA {
     public static int enemyFlag = 3;
 
     //for the first turn the location is also used for indexing all robots
-    public static int indexing = 3;
+    public static int INDEXING = 3;
 
     public static int e_loc_start = 4;
     public static int escort = 5;
@@ -77,5 +78,43 @@ public class SA {
      */
     public static int encode(MapLocation location, int prefix) {
         return prefix + 10* (location.x + location.y * width);
+    }
+    
+
+    /**
+     * adds flags into shared array
+     */
+    public static void updateMap() throws GameActionException {
+        if(rc.readSharedArray(SA.FLAG1) == 0 
+            || rc.readSharedArray(SA.FLAG2) == 0 
+            || rc.readSharedArray(SA.FLAG3) == 0) {
+            setFlags();
+        }
+    }
+
+    /**
+     * A method that will add flags to the shared array if they haven't been yet
+     */
+    public static void setFlags() throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(-1);
+        for(FlagInfo flag : flags) {
+            if(flag.getTeam() == rc.getTeam()) {
+                boolean in = false;
+                for(int i = 0; i <= 2; i++) {
+                    if(flag.getLocation().equals(SA.getLocation(i))) {
+                        in = true;
+                    }
+                }
+
+                if(!in) {
+                    for(int i = 0; i <= 2; i++) {
+                        if(rc.readSharedArray(i) == 0) {
+                            rc.writeSharedArray(i, SA.encode(flag.getLocation(), 0));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
