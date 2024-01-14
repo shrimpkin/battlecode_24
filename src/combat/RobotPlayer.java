@@ -40,6 +40,7 @@ public strictfp class RobotPlayer {
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
+                bombIfAboutToDie();
                 flagStuff();
                 move();
                 SA.updateMap();
@@ -49,6 +50,19 @@ public strictfp class RobotPlayer {
             
             rc.setIndicatorString(indicator);
             Clock.yield();
+        }
+    }
+
+    public static void bombIfAboutToDie() {
+        if (rc.getHealth() < 100) {
+            MapLocation cur = rc.getLocation();
+            if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
+                try {
+                    rc.build(TrapType.EXPLOSIVE, cur);
+                } catch (GameActionException e) {
+                    // just continue, dont want to explicit err
+                }
+            }
         }
     }
 
