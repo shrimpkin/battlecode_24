@@ -23,7 +23,7 @@ public strictfp class RobotPlayer {
     //number that indicates when the robot move in the turn
     static int ID = 0;
     static int NUM_ROBOTS_TO_DEFEND = 5;
-    static int NUM_ROBOTS_TO_ESCORT = 0;
+    static int NUM_ROBOTS_TO_ESCORT = 3;
     static int ENEMIES_PER_TRAP = 3;
 
 
@@ -403,24 +403,28 @@ public strictfp class RobotPlayer {
      */
     public static void defenderBuild() throws GameActionException {
         if (ID >= 4) return; // not a defender
-        RobotInfo[] enems = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 250) return; // can't build: on cool-down / no money
-        // active defense - put bombs on cardinal direction closest to the nearest enemy in actual round
-        if (enems.length > 0 && rc.getRoundNum() > 200) {
+        // active defense - put bombs on direction closest to the nearest enemy (not in setup)
+        if (enemies.length > 0 && rc.getRoundNum() > 200) {
             int minDist = Integer.MAX_VALUE; // min for all positions
             MapLocation target = null;
+            // try and get the direction where the bomb will be closest to an enemy
             for (Direction dir : Utils.directions){
+                // check minimum distance for the choice of direction
                 MapLocation pos = rc.getLocation().add(dir);
                 if (!rc.canBuild(TrapType.EXPLOSIVE, pos)) continue;
                 int md = Integer.MAX_VALUE; // min dist local
-                for (RobotInfo enemy : enems) {
+                for (RobotInfo enemy : enemies) {
                     md = Math.min(md, enemy.getLocation().distanceSquaredTo(pos));
                 }
+                // better than current best? => update
                 if (md < minDist) {
                     minDist = md;
                     target = pos;
                 }
             }
+            // if target has been chosen, then build a bomb there
             if (target != null) {
                 rc.build(TrapType.EXPLOSIVE, target);
                 return;
