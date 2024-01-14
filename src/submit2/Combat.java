@@ -12,20 +12,16 @@ public class Combat {
 
     static RobotInfo[] enemies;
     static RobotInfo[] friendlies;
+    static String indicator;
 
-    static final Direction[] directions = {
-        Direction.NORTH,
-        Direction.NORTHEAST,
-        Direction.EAST,
-        Direction.SOUTHEAST,
-        Direction.SOUTH,
-        Direction.SOUTHWEST,
-        Direction.WEST,
-        Direction.NORTHWEST,
-    };
+    static MapLocation averageEnemy;
+    static MapLocation averageTrap;
+
+    static int OUTNUMBER = 2;
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
+        indicator = "";
     }
 
 
@@ -37,12 +33,28 @@ public class Combat {
     }
 
     /**
+     * Should the robot attempt to make the enemies walk into the traps
+     */
+    public static boolean shouldTrap() throws GameActionException {
+        indicator += "(f,e): (" + friendlies.length + " " + enemies.length + ")";
+        indicator += !(friendlies.length - enemies.length >= OUTNUMBER);
+        return averageTrap != null                                          //make sure there is trap
+                && enemies.length >= 3                                      //make sure there is enough enemies 
+                && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
+    }
+
+    public static void reset() throws GameActionException {
+        indicator = "";
+        resetShouldRunAway();
+        resetShouldTrap();
+    }
+    /**
      * resets all constants used in the decision of whether to run away
      * @throws GameActionException
      */
     public static void resetShouldRunAway() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        friendlies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
 
         numEnemies = enemies.length;
         numFriendlies = friendlies.length;
@@ -56,11 +68,63 @@ public class Combat {
         }
     }
 
+
+    /**
+     * Updates average trap and enemy locations
+     * @throws GameActionException
+     */
+    public static void resetShouldTrap() throws GameActionException {
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        
+        double averageTrap_x = 0;
+        double averageTrap_y = 0;
+
+        double numTraps = 0;
+
+        for(MapInfo info : mapInfo) {
+            if(!info.getTrapType().equals(TrapType.NONE)) {
+                averageTrap_x += info.getMapLocation().x;
+                averageTrap_y += info.getMapLocation().y;
+                numTraps++;
+            }
+        }
+
+        if(numTraps == 0) {
+            averageTrap = null;
+            return;
+        }
+
+        averageTrap_x /= numTraps;
+        averageTrap_y /= numTraps;
+
+        double averageEnemy_x = 0;
+        double averageEnemy_y = 0;
+
+        for(RobotInfo robot : enemies) {
+            averageEnemy_x += robot.getLocation().x;
+            averageEnemy_y += robot.getLocation().y;
+        }
+
+        averageEnemy_x /= enemies.length;
+        averageEnemy_y /= enemies.length;
+
+        averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
+        averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
+        
+    }
+
+    /**
+     *  Gets the direction that result in the robot being behind traps
+     */
+    public static Direction getTrapDirection() throws GameActionException{
+        return averageEnemy.directionTo(averageTrap);
+    }
+
     /**
      * Gets the direction that has the least potential attacking enemies
      */
     public static Direction getDefensiveDirection() throws GameActionException{
-        Direction[] dirsToConsider = directions;
+        Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
         int bestEnemiesSeen = Integer.MAX_VALUE;
 
@@ -82,7 +146,6 @@ public class Combat {
             }
         }
 
-        
         return bestDirectionSoFar;
     }
 
@@ -90,7 +153,7 @@ public class Combat {
      * returns the direction that allows for hitting the lowest health enemy 
      */
     public static Direction getOffensiveDirection() throws GameActionException {
-        Direction[] dirsToConsider = directions;
+        Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
         int minEnemies = Integer.MAX_VALUE;
 
@@ -119,6 +182,10 @@ public class Combat {
         return bestDirectionSoFar;
     }
 
+    /**
+     * Attacks the enemy with the flag
+     * Then the enemy with the lowest health
+     */
     public static void attack() throws GameActionException {
         
         //attacks any enemy robots it can
@@ -148,6 +215,7 @@ public class Combat {
             rc.attack(target);
         }
 
+        
         //heals any friendly robots it  can
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         for(RobotInfo robot : friendlyRobots) {
