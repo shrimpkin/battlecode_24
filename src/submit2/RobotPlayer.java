@@ -323,26 +323,63 @@ public strictfp class RobotPlayer {
      * TODO: Mess around with this, try other traps or a mixture potentially 
      */
     public static void build() throws GameActionException {
-        int numTraps = 0;
-        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-        for(MapInfo info : mapInfo) {
-            if(info.getTrapType() != TrapType.NONE) {
-                numTraps++;
+        MapLocation[] allySpawnLocs = rc.getAllySpawnLocations();
+        for(MapLocation allySpawnLoc : allySpawnLocs) {
+            int numTrapsNearby = 0;
+            MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(allySpawnLoc, 4);
+            for(MapInfo nearbyLoc : nearbyLocs) {
+                if(nearbyLoc.getTrapType() != TrapType.NONE) {
+                    numTrapsNearby += 1;
+                }
+            }
+            if(numTrapsNearby >= 1) {
+                continue;
+            } else {
+                if(rc.canBuild(TrapType.EXPLOSIVE, allySpawnLoc)) {
+                    rc.build(TrapType.EXPLOSIVE, allySpawnLoc);
+                    break;
+                }
             }
         }
 
-        if(numTraps <= rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length) {
-            
+        // putting down bombs when there are lots of enemies nearby and fighting
+        int numEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length;
+        int numTrapsNearby = 0;
+        MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(rc.getLocation(), -1);
+        for(MapInfo nearbyLoc : nearbyLocs) {
+            if(nearbyLoc.getTrapType() != TrapType.NONE) {
+                numTrapsNearby += 1;
+            }
+        }
+
+        if(numEnemies >= 4 && rc.getHealth() <= 900 && numTrapsNearby <= 2) {
             if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
-        } 
-
-        // if(rc.getLocation().x % 3 == 0 && rc.getLocation().y % 3 == 0) {
-        //     if(rc.canBuild(TrapType.STUN, rc.getLocation())) {
-        //         rc.build(TrapType.STUN, rc.getLocation());
+        }       
+         
+        // int numTraps = 0;
+        // MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        // for(MapInfo info : mapInfo) {
+        //     if(info.getTrapType() != TrapType.NONE) {
+        //         numTraps++;
         //     }
         // }
-        
+
+        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
+        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+        //     }
+        // } 
+
+        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
+        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+        //     }
+        // } 
+
+        // if(rc.getCrumbs() >= 1000 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
+        //     rc.build(TrapType.STUN, rc.getLocation());
+        // }
     }
 }
