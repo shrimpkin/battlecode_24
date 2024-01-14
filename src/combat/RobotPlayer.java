@@ -43,6 +43,7 @@ public strictfp class RobotPlayer {
                 flagStuff();
                 move();
                 SA.updateMap();
+                heal();
                 fill();
             }
             
@@ -409,6 +410,13 @@ public strictfp class RobotPlayer {
             for(MapInfo info : mapInfo) {
                 if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
             }
+        }
+    }
+
+    public static void heal() throws GameActionException {
+        RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
+        for(RobotInfo robot : friendlyRobots) {
+            if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
         }
     }
 }

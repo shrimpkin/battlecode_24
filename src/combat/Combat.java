@@ -145,7 +145,7 @@ public class Combat {
                 } 
             }
         }
-        
+
         return bestDirectionSoFar;
     }
 
@@ -215,6 +215,7 @@ public class Combat {
             rc.attack(target);
         }
 
+        
         //heals any friendly robots it  can
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         for(RobotInfo robot : friendlyRobots) {
