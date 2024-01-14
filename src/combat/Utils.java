@@ -44,4 +44,17 @@ public class Utils {
     public static Direction randomDirection() throws GameActionException {
         return directions[rng.nextInt(directions.length)]; 
     }
+
+
+    public static int numberOfTrapsInRadius(int radiusSquared) throws GameActionException {
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos(radiusSquared);
+        int num = 0;
+        for(MapInfo info : mapInfo) {
+            if(info.getTrapType() != TrapType.NONE) {
+                num++;
+            }
+        }
+
+        return num;
+    }
 }

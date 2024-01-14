@@ -15,7 +15,8 @@ public strictfp class RobotPlayer {
     static int NUM_ROBOTS_TO_DEFEND = 0;
     static int NUM_ROBOTS_TO_ESCORT = 0;
     static int ENEMIES_PER_TRAP = 3;
-
+    static int DANGER_LOW_HEALTH = 100;
+    static int MAX_TRAPS_ADJACENT = 3;
 
     //string used for debugging purposes
     static String indicator; 
@@ -40,7 +41,6 @@ public strictfp class RobotPlayer {
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
-                bombIfAboutToDie();
                 flagStuff();
                 move();
                 SA.updateMap();
@@ -49,19 +49,6 @@ public strictfp class RobotPlayer {
             
             rc.setIndicatorString(indicator);
             Clock.yield();
-        }
-    }
-
-    public static void bombIfAboutToDie() {
-        if (rc.getHealth() < 100) {
-            MapLocation cur = rc.getLocation();
-            if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
-                try {
-                    rc.build(TrapType.EXPLOSIVE, cur);
-                } catch (GameActionException e) {
-                    // just continue, dont want to explicit err
-                }
-            }
         }
     }
 
@@ -387,26 +374,27 @@ public strictfp class RobotPlayer {
      * Determines if the robot should build, and what it should build
      * Currently just goes for explosive traps if there are a lot of nearby
      */
-    public static void build() throws GameActionException {        
-        int numTraps = 0;
-        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-        for(MapInfo info : mapInfo) {
-            if(info.getTrapType() != TrapType.NONE) {
-                numTraps++;
+    public static void build() throws GameActionException {
+        int numTraps = Utils.numberOfTrapsInRadius(-1);
+        int enemyCount = Utils.getNumEnemies();
+        int trapsAdjacent = Utils.numberOfTrapsInRadius(1);
+        if(numTraps * ENEMIES_PER_TRAP <= enemyCount && trapsAdjacent <= MAX_TRAPS_ADJACENT && rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+            rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+        } else if (rc.getHealth() <= DANGER_LOW_HEALTH && trapsAdjacent <= MAX_TRAPS_ADJACENT+1) {
+            // Low health but might not be targeted with as many ducks
+            // if the duck still is nearby enemies but not enough to use explosive we'll stun.
+            if (enemyCount >= 1) {
+                if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                    rc.build(TrapType.STUN, rc.getLocation());
+                }
             }
         }
-
-        if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
-            if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-            }
-        } 
 
         // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
         //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
         //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
         //     }
-        // } 
+        // }
 
         // if(rc.getCrumbs() >= 1000 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
         //     rc.build(TrapType.STUN, rc.getLocation());
