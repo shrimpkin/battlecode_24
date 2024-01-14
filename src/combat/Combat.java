@@ -2,6 +2,9 @@ package combat;
 
 import battlecode.common.*;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 public class Combat {
     static RobotController rc;
     boolean shouldRunAway;
@@ -193,32 +196,42 @@ public class Combat {
         MapLocation target = null;
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());   
         for(RobotInfo robot : enemyRobots) {
-            if(rc.canAttack(robot.getLocation()) 
-                && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
-                
-
-                /**
-                 * target flag holders over everything else
-                 */
-                if(robot.hasFlag()) {
+            if (rc.canAttack(robot.getLocation())) {
+                // target flag holders over everything else
+                if (robot.hasFlag()) {
                     rc.attack(robot.getLocation());
                     return;
-                } 
+                }
 
-                minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
-                target = robot.getLocation();
+                // otherwise target lowest hp
+                if (rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
+                    minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
+                    target = robot.getLocation();
+                }
             }
-            
         }
 
-        if(target != null && rc.canAttack(target)) {
+        while (target != null && rc.canAttack(target)) {
             rc.attack(target);
         }
 
-        //heals any friendly robots it  can
-        RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
-        for(RobotInfo robot : friendlyRobots) {
-            if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
+        // can only heal in radius 2
+        RobotInfo[] friendlyRobots = rc.senseNearbyRobots(4, rc.getTeam());
+
+        // sort by lowest hp
+        Arrays.sort(friendlyRobots, new Comparator<RobotInfo>() {
+            @Override
+            public int compare(RobotInfo o1, RobotInfo o2) {
+                return Integer.compare(o1.getHealth(), o2.getHealth());
+            }
+        });
+
+        for (RobotInfo robot : friendlyRobots) {
+            if (rc.canHeal(robot.getLocation())) {
+                rc.heal(robot.getLocation());
+                return;
+            }
+
         }
     }
 }
