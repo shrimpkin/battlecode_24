@@ -127,10 +127,13 @@ public strictfp class RobotPlayer {
         if(SA.getPrefix(SA.enemyFlag) == 0) {
             
             if(nearbyFlags.length > 0) {
-                RobotInfo info = rc.senseRobotAtLocation(nearbyFlags[0].getLocation());
+                FlagInfo info = nearbyFlags[0];
                 
-                if(info == null || info.getTeam().equals(rc.getTeam().opponent())) {
-                    rc.writeSharedArray(SA.enemyFlag, SA.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+                if(info.getTeam().equals(rc.getTeam().opponent())) {
+                    RobotInfo robot = rc.senseRobotAtLocation(info.getLocation());
+                    if(robot == null || robot.getTeam().equals(rc.getTeam().opponent())) {
+                        rc.writeSharedArray(SA.enemyFlag, SA.encode(rc.senseNearbyFlags(-1, rc.getTeam().opponent())[0].getLocation(), 1));
+                    }
                 }
 
             } else if(rc.readSharedArray(SA.enemyFlag) == 0 || rc.getRoundNum() % 100 == 0) {
@@ -256,11 +259,14 @@ public strictfp class RobotPlayer {
         // Sends robots to defend 
         if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
             target = SA.getLocation(SA.defend);
+            if(rc.canSenseLocation(target) && rc.senseNearbyFlags(-1, rc.getTeam()).length == 0) {
+                rc.writeSharedArray(SA.defend, 0);
+            }
             return target;
         }
 
         //Escorts a robot with a flag 
-        if(rc.readSharedArray(SA.escort) != 0 && ID >= 50 - NUM_ROBOTS_TO_ESCORT) {
+        if(rc.readSharedArray(SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
             target = SA.getLocation(SA.escort);
             return target;
         } 

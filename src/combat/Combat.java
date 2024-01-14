@@ -183,6 +183,10 @@ public class Combat {
         return bestDirectionSoFar;
     }
 
+    /**
+     * Attacks the enemy with the flag
+     * Then the enemy with the lowest health
+     */
     public static void attack() throws GameActionException {
         
         //attacks any enemy robots it can
