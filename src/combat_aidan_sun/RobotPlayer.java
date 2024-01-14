@@ -1,10 +1,9 @@
 package combat_aidan_sun;
 
 import battlecode.common.*;
-import combat.Combat;
-import combat.Pathfinding;
-import combat.SA;
-import combat.Utils;
+import combat_david_sun.Pathfinding;
+import combat_david_sun.SA;
+import combat_david_sun.Utils;
 import scala.util.Random;
 
 /**
@@ -46,7 +45,7 @@ public strictfp class RobotPlayer {
             if(rc.isSpawned()) {
                 flagStuff();
                 move();
-                combat.SA.updateMap();
+                combat_david_sun.SA.updateMap();
                 heal();
                 fill();
             }
@@ -60,17 +59,17 @@ public strictfp class RobotPlayer {
      * handles initializing all static fields and assigning each robot an ID
      */
     public static void init() throws GameActionException {        
-        combat.SA.init(rc.getMapWidth(), rc.getMapHeight(), rc);
-        combat.Pathfinding.init(rc);
-        combat.Combat.init(rc);
-        combat.Utils.init(rc);
+        combat_david_sun.SA.init(rc.getMapWidth(), rc.getMapHeight(), rc);
+        combat_david_sun.Pathfinding.init(rc);
+        combat_david_sun.Combat.init(rc);
+        combat_david_sun.Utils.init(rc);
 
         //assigning each duck an ID that is based off of when they move 
         //in a turn
-        rc.writeSharedArray(combat.SA.INDEXING, rc.readSharedArray(combat.SA.INDEXING) + 1);
-        ID = rc.readSharedArray(combat.SA.INDEXING);
-        if(rc.readSharedArray(combat.SA.INDEXING) == 50) {
-            rc.writeSharedArray(combat.SA.INDEXING, 0);
+        rc.writeSharedArray(combat_david_sun.SA.INDEXING, rc.readSharedArray(combat_david_sun.SA.INDEXING) + 1);
+        ID = rc.readSharedArray(combat_david_sun.SA.INDEXING);
+        if(rc.readSharedArray(combat_david_sun.SA.INDEXING) == 50) {
+            rc.writeSharedArray(combat_david_sun.SA.INDEXING, 0);
         }
     }
 
@@ -84,9 +83,9 @@ public strictfp class RobotPlayer {
         indicator += "SPAWN ";
 
         //attempting to find a location close to the flag that is being attacked
-        if(rc.readSharedArray(combat.SA.defend) != 0) {
+        if(rc.readSharedArray(combat_david_sun.SA.defend) != 0) {
             indicator += "DEF";
-            MapLocation target = combat.SA.getLocation(combat.SA.defend);
+            MapLocation target = combat_david_sun.SA.getLocation(combat_david_sun.SA.defend);
 
             for(MapLocation spawn : spawnLocs) {
                 //2 makes sure it is in the square around the flag
@@ -120,14 +119,14 @@ public strictfp class RobotPlayer {
      */
     public static void flagStuff() throws GameActionException {
         FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
-        MapLocation enemyFlagTarget = combat.SA.getLocation(combat.SA.enemyFlag);
+        MapLocation enemyFlagTarget = combat_david_sun.SA.getLocation(combat_david_sun.SA.enemyFlag);
         //reseting enemy flags if not at SA location
         if(rc.canSenseLocation(enemyFlagTarget) && nearbyFlags.length == 0) {
-            rc.writeSharedArray(combat.SA.enemyFlag, 0);
+            rc.writeSharedArray(combat_david_sun.SA.enemyFlag, 0);
         }
         
         //writing enemy flags into shared array
-        if(combat.SA.getPrefix(combat.SA.enemyFlag) == 0) {
+        if(combat_david_sun.SA.getPrefix(combat_david_sun.SA.enemyFlag) == 0) {
             
             if(nearbyFlags.length > 0) {
                 FlagInfo info = nearbyFlags[0];
@@ -137,14 +136,14 @@ public strictfp class RobotPlayer {
 
                     //only adds the flag to the shared array if we don't already possess it
                     if(robot == null || robot.getTeam().equals(rc.getTeam().opponent())) {
-                        rc.writeSharedArray(combat.SA.enemyFlag, combat.SA.encode(info.getLocation(), 1));
+                        rc.writeSharedArray(combat_david_sun.SA.enemyFlag, combat_david_sun.SA.encode(info.getLocation(), 1));
                     }
                 }
 
-            } else if(rc.readSharedArray(combat.SA.enemyFlag) == 0 || rc.getRoundNum() % 100 == 0) {
+            } else if(rc.readSharedArray(combat_david_sun.SA.enemyFlag) == 0 || rc.getRoundNum() % 100 == 0) {
                 if(rc.senseBroadcastFlagLocations().length != 0) {
                     MapLocation loc = rc.senseBroadcastFlagLocations()[0];
-                    rc.writeSharedArray(combat.SA.enemyFlag, combat.SA.encode(loc, 0));
+                    rc.writeSharedArray(combat_david_sun.SA.enemyFlag, combat_david_sun.SA.encode(loc, 0));
                 }
             }
         }
@@ -154,16 +153,16 @@ public strictfp class RobotPlayer {
             MapLocation flagLoc = flag.getLocation();
             if(rc.canSenseLocation(flagLoc) && rc.canPickupFlag(flagLoc)) {
                 rc.pickupFlag(flagLoc);
-                rc.writeSharedArray(combat.SA.enemyFlag, 0);
+                rc.writeSharedArray(combat_david_sun.SA.enemyFlag, 0);
             }
         }
         
 
         //creating escort for returning flags
         if(rc.hasFlag() && !hasMyFlag()) {
-            rc.writeSharedArray(combat.SA.escort, combat.SA.encode(rc.getLocation(), 1));
-            if(combat.SA.getLocation(combat.SA.enemyFlag).distanceSquaredTo(rc.getLocation()) <= 2) {
-                rc.writeSharedArray(combat.SA.enemyFlag, 0);
+            rc.writeSharedArray(combat_david_sun.SA.escort, combat_david_sun.SA.encode(rc.getLocation(), 1));
+            if(combat_david_sun.SA.getLocation(combat_david_sun.SA.enemyFlag).distanceSquaredTo(rc.getLocation()) <= 2) {
+                rc.writeSharedArray(combat_david_sun.SA.enemyFlag, 0);
             }
         }
 
@@ -189,13 +188,13 @@ public strictfp class RobotPlayer {
     public static MapLocation move() throws GameActionException {
         MapLocation target;
         //this will be where we attempt to move
-        if(combat.Utils.isEnemies() && !rc.hasFlag()) {
+        if(combat_david_sun.Utils.isEnemies() && !rc.hasFlag()) {
             target = getCombatTarget();
             
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
-                rc.writeSharedArray(combat.SA.defend, combat.SA.encode(getFlagDefense(), 1) );
+                rc.writeSharedArray(combat_david_sun.SA.defend, combat_david_sun.SA.encode(getFlagDefense(), 1) );
             }
 
             indicator += "c: " + target + "\n";
@@ -206,7 +205,7 @@ public strictfp class RobotPlayer {
         target = getTarget();
         
         //used as random movement if we don't have a target
-        Direction dir = combat.Utils.randomDirection();
+        Direction dir = combat_david_sun.Utils.randomDirection();
         boolean hasFlag = rc.hasFlag();
 
         if(target != null) {
@@ -216,7 +215,7 @@ public strictfp class RobotPlayer {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            combat.Pathfinding.initTurn();
+            combat_david_sun.Pathfinding.initTurn();
             Pathfinding.move(target);
         }
         
@@ -225,8 +224,8 @@ public strictfp class RobotPlayer {
         //updating shared array that a flag was dropped off during 
         //this robots movement
         if(rc.hasFlag() != hasFlag) {
-            rc.writeSharedArray(combat.SA.enemyFlag, 0);
-            rc.writeSharedArray(combat.SA.escort, 0);
+            rc.writeSharedArray(combat_david_sun.SA.enemyFlag, 0);
+            rc.writeSharedArray(combat_david_sun.SA.escort, 0);
         }
         indicator += target + "\n";
         return target;
@@ -246,7 +245,7 @@ public strictfp class RobotPlayer {
         //attempts to return flag to closest spawn location
         //TODO: avoid enemies
         if(rc.hasFlag() && !hasMyFlag()) {
-            target = combat.SA.getLocation(combat.SA.FLAG1);
+            target = combat_david_sun.SA.getLocation(combat_david_sun.SA.FLAG1);
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
             int min = Integer.MAX_VALUE;
             for(MapLocation spawn : spawnLocs) {
@@ -263,25 +262,25 @@ public strictfp class RobotPlayer {
             target = getFlagDefense();
             
             //resets defense location if there are no enemies 
-            if(combat.SA.getLocation(combat.SA.defend).equals(target) && !combat.Utils.isEnemies() && rc.canSenseLocation(target)) {
-                rc.writeSharedArray(combat.SA.defend, 0);
+            if(combat_david_sun.SA.getLocation(combat_david_sun.SA.defend).equals(target) && !combat_david_sun.Utils.isEnemies() && rc.canSenseLocation(target)) {
+                rc.writeSharedArray(combat_david_sun.SA.defend, 0);
             }
 
             return target;
         } 
 
         // Sends robots to defend 
-        if(ID <= NUM_ROBOTS_TO_DEFEND && combat.SA.getPrefix(combat.SA.defend) == 1) {
-            target = combat.SA.getLocation(combat.SA.defend);
+        if(ID <= NUM_ROBOTS_TO_DEFEND && combat_david_sun.SA.getPrefix(combat_david_sun.SA.defend) == 1) {
+            target = combat_david_sun.SA.getLocation(combat_david_sun.SA.defend);
             if(rc.canSenseLocation(target) && rc.senseNearbyFlags(-1, rc.getTeam()).length == 0) {
-                rc.writeSharedArray(combat.SA.defend, 0);
+                rc.writeSharedArray(combat_david_sun.SA.defend, 0);
             }
             return target;
         }
 
         //Escorts a robot with a flag 
-        if(rc.readSharedArray(combat.SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
-            target = combat.SA.getLocation(combat.SA.escort);
+        if(rc.readSharedArray(combat_david_sun.SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
+            target = combat_david_sun.SA.getLocation(combat_david_sun.SA.escort);
             return target;
         } 
 
@@ -297,7 +296,7 @@ public strictfp class RobotPlayer {
         } 
         
         //go aggresive and if not aggresive targets exists go middle
-        target = combat.SA.getLocation(combat.SA.enemyFlag);
+        target = combat_david_sun.SA.getLocation(combat_david_sun.SA.enemyFlag);
         if(target.equals(new MapLocation(0,0))) {
             target = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
         }
@@ -311,11 +310,11 @@ public strictfp class RobotPlayer {
     public static MapLocation getFlagDefense() throws GameActionException {
         switch (ID) {
             case 1:
-                return combat.SA.getLocation(combat.SA.FLAG1);
+                return combat_david_sun.SA.getLocation(combat_david_sun.SA.FLAG1);
             case 2: 
-                return combat.SA.getLocation(combat.SA.FLAG2);
+                return combat_david_sun.SA.getLocation(combat_david_sun.SA.FLAG2);
             case 3: 
-                return combat.SA.getLocation(SA.FLAG3);
+                return combat_david_sun.SA.getLocation(SA.FLAG3);
         }
 
         return null;
@@ -326,36 +325,36 @@ public strictfp class RobotPlayer {
      */
     public static MapLocation getCombatTarget() throws GameActionException {
         //attempting to build if enough enemies to lurn into trap
-        if(combat.Utils.getNumEnemies() >= ENEMIES_PER_TRAP) {
+        if(combat_david_sun.Utils.getNumEnemies() >= ENEMIES_PER_TRAP) {
             build();
         }
 
-        combat.Combat.reset();
-        boolean shouldRun = combat.Combat.shouldRunAway();
-        boolean shouldTrap = combat.Combat.shouldTrap();
+        combat_david_sun.Combat.reset();
+        boolean shouldRun = combat_david_sun.Combat.shouldRunAway();
+        boolean shouldTrap = combat_david_sun.Combat.shouldTrap();
 
         Direction dir;
 
         if(shouldTrap) {
             indicator += "TRAP ";
-            dir = combat.Combat.getTrapDirection();
+            dir = combat_david_sun.Combat.getTrapDirection();
         } else if(shouldRun) {
             indicator += "DEF";
-            dir = combat.Combat.getDefensiveDirection();
+            dir = combat_david_sun.Combat.getDefensiveDirection();
         } else {
             indicator += "OFF";
-            dir = combat.Combat.getOffensiveDirection();
+            dir = combat_david_sun.Combat.getOffensiveDirection();
         }
 
         if(dir == null) dir = Direction.CENTER;
 
         MapLocation targetLocation = rc.getLocation().add(dir);
         if(shouldRun || shouldTrap) {
-            combat.Combat.attack();
+            combat_david_sun.Combat.attack();
             if(rc.canMove(dir)) rc.move(dir);
         } else {
             if(rc.canMove(dir)) rc.move(dir);
-            combat.Combat.attack();
+            combat_david_sun.Combat.attack();
         }
 
         indicator += combat_aidan_sun.Combat.indicator;

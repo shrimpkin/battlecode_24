@@ -1,4 +1,4 @@
-package combat;
+package combat_david_sun;
 
 import battlecode.common.*;
 import scala.util.Random;

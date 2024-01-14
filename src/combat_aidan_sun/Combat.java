@@ -1,7 +1,6 @@
 package combat_aidan_sun;
 
 import battlecode.common.*;
-import combat.Utils;
 
 public class Combat {
     static RobotController rc;
