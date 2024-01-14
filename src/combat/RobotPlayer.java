@@ -44,6 +44,7 @@ public strictfp class RobotPlayer {
                 flagStuff();
                 move();
                 SA.updateMap();
+                fill();
             }
             
             rc.setIndicatorString(indicator);
@@ -170,6 +171,9 @@ public strictfp class RobotPlayer {
         //creating escort for returning flags
         if(rc.hasFlag() && !hasMyFlag()) {
             rc.writeSharedArray(SA.escort, SA.encode(rc.getLocation(), 1));
+            if(SA.getLocation(SA.enemyFlag).distanceSquaredTo(rc.getLocation()) <= 2) {
+                rc.writeSharedArray(SA.enemyFlag, 0);
+            }
         }
 
     }
@@ -397,5 +401,28 @@ public strictfp class RobotPlayer {
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         } 
+
+        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
+        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+        //     }
+        // } 
+
+        // if(rc.getCrumbs() >= 1000 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
+        //     rc.build(TrapType.STUN, rc.getLocation());
+        // }
+    }
+
+    /**
+     * Fills in a random tiles if we have extra action and see no enemies
+     * @throws GameActionException
+     */
+    public static void fill() throws GameActionException {
+        if(!Utils.isEnemies()) {
+            MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+            for(MapInfo info : mapInfo) {
+                if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
+            }
+        }
     }
 }

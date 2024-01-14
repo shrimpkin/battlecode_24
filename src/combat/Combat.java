@@ -145,7 +145,6 @@ public class Combat {
                 } 
             }
         }
-
         
         return bestDirectionSoFar;
     }
