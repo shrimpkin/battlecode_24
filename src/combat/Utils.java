@@ -19,7 +19,6 @@ public class Utils {
     };
 
     static final Random rng = new Random(6147);
-
     
     public static void init(RobotController r) {
         rc = r;
@@ -39,6 +38,9 @@ public class Utils {
         return rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length > 0;
     }
 
+    /**
+     * @return a random direction from Utils.directions
+     */
     public static Direction randomDirection() throws GameActionException {
         return directions[rng.nextInt(directions.length)]; 
     }
