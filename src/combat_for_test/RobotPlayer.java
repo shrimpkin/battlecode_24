@@ -1,7 +1,6 @@
-package quick;
+package combat_for_test;
 
 import battlecode.common.*;
-import quick.pathfinding.*;
 import scala.util.Random;
 
 /**
@@ -72,8 +71,10 @@ public strictfp class RobotPlayer {
     public static void init() throws GameActionException {
         map.setDimension(rc.getMapWidth(), rc.getMapHeight(), rc);
         SA.init(rc.getMapWidth(), rc.getMapHeight(), rc);
-        Pathfinding.init(rc);
         
+        Pathfinding.init(rc);
+        Combat.init(rc);
+
         //assigning each duck an ID that is based off of when they move 
         //in a turn
         rc.writeSharedArray(3, rc.readSharedArray(3) + 1);
@@ -122,8 +123,6 @@ public strictfp class RobotPlayer {
         }
         return false;
     }
-
-    
 
     /**
      * Determines where the robot should move on the given turn
@@ -254,93 +253,26 @@ public strictfp class RobotPlayer {
 
     /**
      * Choosing movement target and attacking 
-     * TODO: experiment with different micro patterns
      * @return
      * @throws GameActionException
      */
     public static MapLocation getCombatTarget() throws GameActionException {
-        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        RobotInfo[] friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
-        MapLocation target = null;
+        Combat.resetShouldRunAway();
         
-        double overallEnemyDx = 0;
-        double overallEnemyDy = 0;
+        Combat.attack();
 
-        for(RobotInfo enemy : enemies) {
-            overallEnemyDx += enemy.getLocation().x;
-            overallEnemyDy += enemy.getLocation().y;
-        }
-
-        overallEnemyDx /= enemies.length;
-        overallEnemyDy /= enemies.length;
-
-        indicator += "e(dx, dy): (" + (int) overallEnemyDx + "," + (int) overallEnemyDy + ")";
-
-        
-        if(friendlies.length <= enemies.length) {
-            combat();
-            if(friendlies.length == 0 || friendlies.length + 3 < enemies.length) {
-                target = SA.getLocation(SA.FLAG1);
-                return target;
-            }
-
-            double overallFriendlyDx = 0;
-            double overallFriendlyDy = 0;
-
-            for(RobotInfo friend : friendlies) {
-                overallFriendlyDx += friend.getLocation().x;
-                overallFriendlyDy += friend.getLocation().y;
-            }
-
-            overallFriendlyDx /= friendlies.length;
-            overallFriendlyDy /= friendlies.length;
-
-            indicator += "f(dx, dy): (" + (int) overallFriendlyDx + "," + (int) overallFriendlyDy + ")";
-
-            target = new MapLocation((int)overallFriendlyDx, (int)overallFriendlyDy);
+        Direction dir;
+        if(Combat.shouldRunAway()) {
+            dir = Combat.getDefensiveDirection();
         } else {
-            target = getTarget();
-            combat();
+            dir = Combat.getOffensiveDirection();
         }
-    
-        return target;
+
+        if(dir == null) dir = Direction.CENTER;
+
+        return rc.getLocation().add(dir);
     }
 
-    /**
-     * method for all fighting movement/ attack patterns
-     * @param rc
-     * @throws GameActionException
-     */
-    public static void combat() throws GameActionException {
-        //attacks any enemy robots it can
-        int minHealth = 1001;
-        MapLocation target = null;
-        RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());   
-        for(RobotInfo robot : enemyRobots) {
-            if(rc.canAttack(robot.getLocation()) 
-                && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
-                
-                /**
-                 * target flag holders over everything else
-                 */
-                if(robot.hasFlag()) rc.attack(robot.getLocation());
-
-                minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
-                target = robot.getLocation();
-            }
-            
-        }
-
-        if(target != null) {
-            rc.attack(target);
-        }
-
-        //heals any friendly robots it  can
-        RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
-        for(RobotInfo robot : friendlyRobots) {
-            if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
-        }
-    }
 
     /**
      * Attempts to buy global upgrades
