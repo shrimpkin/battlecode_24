@@ -23,19 +23,37 @@ public class Combat {
     static int HEALTH_TO_RUNAWAY = 600;
     static int IS_STUCK_TURNS = 3;
     static enum combatMode {OFF, DEF, TRAP, NONE};
-    static combatMode[] combatModeLog;
-    static MapLocation[] combatLocations;
+    static enum actionMode {HEAL, ATT, NONE};
 
+    static combatMode[] modeLog;
+    static MapLocation[] locations;
+    static actionMode[] actionLog;
 
-
+    /**
+     * Inits all local variables
+     */
     public static void init(RobotController r) throws GameActionException {
         rc = r;
         indicator = "";
 
-        combatModeLog = new combatMode[2001];
-        combatModeLog[0] = combatMode.NONE;
+        modeLog = new combatMode[2001];
+        modeLog[0] = combatMode.NONE;
 
-        combatLocations = new MapLocation[2001];
+        locations = new MapLocation[2001];
+
+        actionLog = new actionMode[2001];
+        actionLog[0] = actionMode.NONE;
+    }
+
+    /**
+     * updates all variables that are needed for decision making
+     * needs to be called every turn that combat is done
+     */
+    public static void reset() throws GameActionException {
+        locations[rc.getRoundNum()] = rc.getLocation();
+        indicator = "";
+        resetShouldRunAway();
+        resetShouldTrap();
     }
 
     /**
@@ -55,25 +73,24 @@ public class Combat {
     }
 
     public static boolean shouldContinueTrap() throws GameActionException {
-        return (combatModeLog[rc.getRoundNum() - 1].equals(combatMode.TRAP) && !combatModeLog[rc.getRoundNum() - 2].equals(combatMode.TRAP));
+        return (modeLog[rc.getRoundNum() - 1].equals(combatMode.TRAP) && !modeLog[rc.getRoundNum() - 2].equals(combatMode.TRAP));
     }
 
-    public static boolean isStuck() throws GameActionException {
+    /**
+     * @return true if the robot has been in combat for the last three rounds
+     *          and has not done anything during those three rounds
+     */
+    public static boolean isUseless() throws GameActionException {
         for(int i = 1; i <= IS_STUCK_TURNS; i++) {
             int index = rc.getRoundNum() - i;
 
             if(index < 0) return false;
-            if(combatLocations[index] == null) return false;
-            if(!combatLocations[index].equals(rc.getLocation())) return false;
+            if(locations[index] == null) return false;
+            if(!locations[index].equals(rc.getLocation())) return false;
+            if(!actionLog[index].equals(actionMode.NONE)) return false;
         }
 
         return true;
-    }
-
-    public static void reset() throws GameActionException {
-        indicator = "";
-        resetShouldRunAway();
-        resetShouldTrap();
     }
 
     /**
@@ -226,6 +243,7 @@ public class Combat {
                  */
                 if(robot.hasFlag()) {
                     rc.attack(robot.getLocation());
+                    actionLog[rc.getRoundNum()] = actionMode.ATT;
                     return;
                 } 
 
@@ -243,7 +261,10 @@ public class Combat {
         //heals any friendly robots it  can
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         for(RobotInfo robot : friendlyRobots) {
-            if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
+            if(rc.canHeal(robot.getLocation()))  {
+                actionLog[rc.getRoundNum()] = actionMode.HEAL;
+                rc.heal(robot.getLocation());
+            }
         }
     }
 
@@ -297,13 +318,13 @@ public class Combat {
         Direction dir;
 
         if(shouldTrap) {
-            combatModeLog[rc.getRoundNum()] = combatMode.TRAP;
+            modeLog[rc.getRoundNum()] = combatMode.TRAP;
             dir = Combat.getTrapDirection();
         } else if(shouldRun) {
-            combatModeLog[rc.getRoundNum()] = combatMode.DEF;
+            modeLog[rc.getRoundNum()] = combatMode.DEF;
             dir = Combat.getDefensiveDirection();
         } else {
-            combatModeLog[rc.getRoundNum()] = combatMode.OFF;
+            modeLog[rc.getRoundNum()] = combatMode.OFF;
             dir = Combat.getOffensiveDirection();
         }
 
@@ -321,10 +342,10 @@ public class Combat {
         indicator += Combat.indicator;
         for(int i = rc.getRoundNum(); i > 0; i--) {
             if(rc.getRoundNum() - i > 2) break;
-
-            indicator += combatModeLog[i] + " ";
+    
+            indicator += "(" + modeLog[i] + "," +  actionLog[i] + ") ";
         }
-        indicator += isStuck() + " ";
+        indicator += isUseless() + " ";
         return targetLocation;
     }
 }

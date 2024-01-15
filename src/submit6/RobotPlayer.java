@@ -33,7 +33,8 @@ public strictfp class RobotPlayer {
             indicator = "";
 
             if(rc.getRoundNum() == 1) init();
-            Combat.combatModeLog[rc.getRoundNum()] = Combat.combatMode.NONE;
+            Combat.modeLog[rc.getRoundNum()] = Combat.combatMode.NONE;
+            Combat.actionLog[rc.getRoundNum()] = Combat.actionMode.NONE;
 
             if(rc.getRoundNum() % 750 == 0) globals();
 
