@@ -202,7 +202,7 @@ public strictfp class RobotPlayer {
     public static MapLocation move() throws GameActionException {
         MapLocation target;
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag()) {
+        if(Utils.isEnemies() && !rc.hasFlag() && !Combat.isUseless()) {
             target = Combat.getCombatTarget();
             
             if(ID <= 3) {

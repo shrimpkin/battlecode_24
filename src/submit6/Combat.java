@@ -29,6 +29,7 @@ public class Combat {
     static MapLocation[] locations;
     static actionMode[] actionLog;
 
+
     /**
      * Inits all local variables
      */
