@@ -9,6 +9,7 @@ import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.Team;
 import battlecode.common.TrapType;
 import battlecode.world.Trap;
 import scala.util.Random;
@@ -28,7 +29,8 @@ public strictfp class RobotPlayer {
 
 
     //string used for debugging purposes
-    static String indicator; 
+    static String indicator;
+    static boolean isDefender;
     static RobotController rc;
     static final Random rng = new Random(6147);
 
@@ -93,6 +95,9 @@ public strictfp class RobotPlayer {
         if(rc.readSharedArray(SA.INDEXING) == 50) {
             rc.writeSharedArray(SA.INDEXING, 0);
         }
+
+        // assign roles based on ID
+        isDefender = ID <= 3;
     }
 
     /**
@@ -213,7 +218,7 @@ public strictfp class RobotPlayer {
         // TODO: fixed half-assed patch for bots trying to do combat during setup
         if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() >= 200) {
             target = getCombatTarget();
-            if(ID <= 3) {
+            if(isDefender) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
@@ -280,7 +285,7 @@ public strictfp class RobotPlayer {
         }
 
         //controls defense
-        if(ID <= 3) {
+        if(isDefender) {
             target = getFlagDefense();
 
             //resets defense location if there are no enemies
@@ -349,7 +354,7 @@ public strictfp class RobotPlayer {
     public static MapLocation getCombatTarget() throws GameActionException {
         //attempting to build if enough enemies to lure into trap or defend from flag captures
         int enemies = Utils.getNumEnemies();
-        if(enemies >= ENEMIES_PER_TRAP || (ID <= 3 && enemies > 0)) {
+        if(enemies >= ENEMIES_PER_TRAP || (isDefender && enemies > 0)) {
             build();
         }
 
@@ -402,7 +407,7 @@ public strictfp class RobotPlayer {
      * namely : tries to place stun on corners whenever possible
      */
     public static void defenderBuild() throws GameActionException {
-        if (ID >= 4) return; // not a defender
+        if (!isDefender) return; // not a defender
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 250) return; // can't build: on cool-down / no money
         // active defense - put bombs on direction closest to the nearest enemy (not in setup)
@@ -433,6 +438,10 @@ public strictfp class RobotPlayer {
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
+            // check if flag is present
+            if (rc.senseNearbyFlags(0).length == 0) {
+                return; // flag is lost, its joever
+            }
             for (MapLocation pos : Utils.corners(rc.getLocation())) {
                 MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
