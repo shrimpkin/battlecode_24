@@ -1,4 +1,4 @@
-package submit2;
+package submit5;
 
 import battlecode.common.FlagInfo;
 import battlecode.common.GameActionException;
