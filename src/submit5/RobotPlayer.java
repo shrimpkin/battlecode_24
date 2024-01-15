@@ -64,34 +64,43 @@ public strictfp class RobotPlayer {
     public static boolean defenderSetup() throws GameActionException {
         // Flag movement
         if (rc.hasFlag()) {
-            MapLocation curPos = rc.getLocation();
-
-            MapLocation mapCenter = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
-
-            // todo: might mess up on vertical maps
-            Direction toCenter = curPos.directionTo(mapCenter);
-            //Direction toCenter = Utils.toCardinalDirection(toCenterRaw, true);
-            Direction toEdge = toCenter.opposite();
-            Direction toCorner = toEdge.rotateRight().rotateRight();
-
-            // Calculate which edge we should be moving towards
-            MapLocation targetDirOne = mapCenter.add(toEdge).add(toCorner);
-            int xDiff = mapCenter.x - targetDirOne.x;
-            int yDiff = mapCenter.y - targetDirOne.y;
-
-
-            int targetX;
-            if (xDiff > 0) {
-                targetX = 0;
-            } else {
-                targetX = rc.getMapWidth() -1;
+            if (ID != 1 && SA.getPrefix(SA.FLAG1) != 1) {
+                return false; // wait
             }
 
+            int targetX;
             int targetY;
-            if (yDiff > 0) {
-                targetY = 0;
+            if (ID ==1) {
+                // pick a corner
+                MapLocation curPos = rc.getLocation();
+                // TODO: We should use the distance to the wall
+                MapLocation mapCenter = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+
+                Direction toCenter = curPos.directionTo(mapCenter);
+                Direction toEdge = toCenter.opposite();
+                Direction toCorner = toEdge.rotateRight().rotateRight();
+
+                // Calculate which edge we should be moving towards
+                MapLocation targetDirOne = mapCenter.add(toEdge).add(toCorner);
+                int xDiff = mapCenter.x - targetDirOne.x;
+                int yDiff = mapCenter.y - targetDirOne.y;
+
+                if (xDiff > 0) {
+                    targetX = 0;
+                } else {
+                    targetX = rc.getMapWidth() - 1;
+                }
+
+                if (yDiff > 0) {
+                    targetY = 0;
+                } else {
+                    targetY = rc.getMapHeight() - 1;
+                }
             } else {
-                targetY = rc.getMapHeight() -1;
+                // retrieve base target from flag1 in SA
+                MapLocation bunkerCorner = SA.getLocation(SA.FLAG1);
+                targetX = bunkerCorner.x;
+                targetY = bunkerCorner.y;
             }
 
             // ok now based on ID we assign a new loc to spread them out
