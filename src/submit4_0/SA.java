@@ -15,13 +15,12 @@ public class SA {
     public static int FLAG3 = 2;
     public static int enemyFlag = 3;
 
-    //for the first turn the location is also used for indexing all robots
-    public static int INDEXING = 3;
+    public static int INDEXING = 4;
 
-    public static int e_loc_start = 4;
-    public static int escort = 5;
-    public static int defend = 6;
-    public static int f_loc_start = 56;
+    public static int e_loc_start = 5;
+    public static int escort = 6;
+    public static int defend = 7;
+    public static int f_loc_start = 57;
 
     static RobotController rc;
     
