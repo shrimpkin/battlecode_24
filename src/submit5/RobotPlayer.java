@@ -23,6 +23,7 @@ public strictfp class RobotPlayer {
     static final Random rng = new Random(6147);
 
     public static void run(RobotController m_rc) throws GameActionException {
+        boolean defenderHasMovedFlag = false;
         rc = m_rc;
 
         while(true) {
@@ -41,6 +42,12 @@ public strictfp class RobotPlayer {
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
                 bombIfAboutToDie();
+                if (ID <= 3) {
+                    // is a defender
+                    if (rc.getRoundNum() < 200 && SA.getPrefix(ID-1) == 0) {
+                        defenderHasMovedFlag = defenderSetup();
+                    }
+                }
                 flagStuff();
                 move();
                 SA.updateMap();
@@ -52,6 +59,100 @@ public strictfp class RobotPlayer {
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
+    }
+
+    public static boolean defenderSetup() throws GameActionException {
+        // Flag movement
+        if (rc.hasFlag()) {
+            MapLocation curPos = rc.getLocation();
+
+            MapLocation mapCenter = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+
+            // todo: might mess up on vertical maps
+            Direction toCenter = curPos.directionTo(mapCenter);
+            //Direction toCenter = Utils.toCardinalDirection(toCenterRaw, true);
+            Direction toEdge = toCenter.opposite();
+            Direction toCorner = toEdge.rotateRight().rotateRight();
+
+            // Calculate which edge we should be moving towards
+            MapLocation targetDirOne = mapCenter.add(toEdge).add(toCorner);
+            int xDiff = mapCenter.x - targetDirOne.x;
+            int yDiff = mapCenter.y - targetDirOne.y;
+
+
+            int targetX;
+            if (xDiff > 0) {
+                targetX = 0;
+            } else {
+                targetX = rc.getMapWidth() -1;
+            }
+
+            int targetY;
+            if (yDiff > 0) {
+                targetY = 0;
+            } else {
+                targetY = rc.getMapHeight() -1;
+            }
+
+            // ok now based on ID we assign a new loc to spread them out
+            switch (ID) {
+                case 1: break;
+                case 2: {
+                    if (targetY == 0) targetY += 7;
+                    else targetY -= 7;
+                    break;
+                }
+                case 3: {
+                    if (targetX == 0) targetX += 7;
+                    else targetX -= 7;
+                    break;
+                }
+            }
+
+            // Find new place to drop;
+            do {
+                // Move to this new location
+                MapLocation targetFlagPos = new MapLocation(targetX, targetY);
+
+                if (Utils.validPosition(targetFlagPos) && rc.getLocation().equals(targetFlagPos)) {
+                    // we are at target loc drop flag
+                    if (rc.canDropFlag(targetFlagPos)) {
+                        rc.dropFlag(targetFlagPos);
+
+                        // put in SA
+                        rc.writeSharedArray(ID-1, SA.encode(targetFlagPos, 1));
+                        return true;
+                    }
+
+                    // otherwise we need to shift this
+                    // todo: account if targetFlagPos is unreachable
+                    switch (ID) {
+                        case 1: break;
+                        case 2: {
+                            if (targetY == 0) targetY += 1;
+                            else targetY -= 1;
+                            break;
+                        }
+                        case 3: {
+                            if (targetX == 0) targetX += 1;
+                            else targetX -= 1;
+                            break;
+                        }
+                    }
+                }
+
+                Pathfinding.move(targetFlagPos);
+            } while (true);
+        } else {
+            MapLocation flagLoc = getFlagDefense();
+            if (rc.canPickupFlag(flagLoc)) {
+                rc.pickupFlag(flagLoc);
+            } else {
+                if (!rc.getLocation().equals(flagLoc)) Pathfinding.move(flagLoc);
+            }
+        }
+
+        return false;
     }
 
     public static void bombIfAboutToDie() throws GameActionException {
@@ -90,23 +191,42 @@ public strictfp class RobotPlayer {
         MapLocation[] spawnLocs = rc.getAllySpawnLocations();
         indicator += "SPAWN ";
 
+        MapLocation target;
+
         //attempting to find a location close to the flag that is being attacked
         if(rc.readSharedArray(SA.defend) != 0) {
             indicator += "DEF";
-            MapLocation target = SA.getLocation(SA.defend);
+            target = SA.getLocation(SA.defend);
+        } else {
+            // spawn closest to flag1 by default, which should all be in c anyways
+            target = SA.getLocation(SA.FLAG1);
+        }
 
-            for(MapLocation spawn : spawnLocs) {
-                //2 makes sure it is in the square around the flag
-                if(spawn.distanceSquaredTo(target) < 2) {
-                    if(rc.canSpawn(spawn)) {
-                        rc.spawn(spawn);
-                        return true;
-                    }    
-                }
+
+        MapLocation closestSpawn = spawnLocs[0];
+        int minDist = Integer.MAX_VALUE;
+        for(MapLocation spawn : spawnLocs) {
+            int dist = spawn.distanceSquaredTo(target);
+
+            // close enough
+            if (dist <= 4 && rc.canSpawn(spawn)) {
+                rc.spawn(spawn);
+                return true;
+            }
+
+            if(rc.canSpawn(spawn) && minDist > dist) {
+                minDist = dist;
+                closestSpawn = spawn;
             }
         }
 
-        //randomly spawning
+        if (rc.canSpawn(closestSpawn)) {
+            rc.spawn(closestSpawn);
+            return true;
+        }
+
+
+        // else randomly spawning
         for(MapLocation spawn : spawnLocs) {
             if (rc.canSpawn(spawn)) {
                 indicator += "RND ";
@@ -404,11 +524,29 @@ public strictfp class RobotPlayer {
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
+            MapInfo sensed = rc.senseMapInfo(rc.getLocation());
+            if (sensed.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+                return;
+            }
+
             for (MapLocation pos : Utils.corners(rc.getLocation())) {
-                MapInfo pinfo = rc.senseMapInfo(pos);
-                if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
-                    rc.build(TrapType.STUN, pos);
-                    return;
+                if (Utils.validPosition(pos)) {
+                    MapInfo pinfo = rc.senseMapInfo(pos);
+                    if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)) {
+                        rc.build(TrapType.STUN, pos);
+                        return;
+                    }
+                }
+            }
+
+            for (MapLocation pos: Utils.cardinals(rc.getLocation())) {
+                if (Utils.validPosition(pos)) {
+                    MapInfo pinfo = rc.senseMapInfo(pos);
+                    if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.EXPLOSIVE, pos)) {
+                        rc.build(TrapType.EXPLOSIVE, pos);
+                        return;
+                    }
                 }
             }
         }
