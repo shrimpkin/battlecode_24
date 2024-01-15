@@ -17,6 +17,7 @@ public class Combat {
     static String indicator;
 
     static MapLocation averageEnemy;
+    static MapLocation averageFriend;
     static MapLocation averageTrap;
 
     static int OUTNUMBER = 2;
@@ -153,6 +154,24 @@ public class Combat {
         averageEnemy_y /= enemies.length;
 
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
+
+        double averageFriend_x = 0;
+        double averageFriend_y = 0;
+        for(RobotInfo robot : friendlies) {
+            averageFriend_x += robot.getLocation().x;
+            averageFriend_x += robot.getLocation().y;
+        }
+
+        if(friendlies.length == 0) {
+            averageFriend = null;
+        } else {
+            averageFriend_x /= friendlies.length;
+            averageFriend_y /= friendlies.length;
+            averageFriend = new MapLocation((int) averageFriend_x, (int) averageFriend_y);
+
+        }
+
+        
     }
 
     /**
@@ -168,23 +187,20 @@ public class Combat {
     public static Direction getDefensiveDirection() throws GameActionException{
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
-        int bestEnemiesSeen = Integer.MAX_VALUE;
+        int bestDistance = Integer.MAX_VALUE;
 
         for(Direction dir : dirsToConsider) {
             if(rc.canMove(dir)) {
                 MapLocation targetLocation = rc.getLocation().add(dir);
-                int potentialEnemies = 0;
-                for(RobotInfo enemy: enemies) {
-                    //this checks if an enemy could attack the current robot
-                    if(targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        potentialEnemies++;
-                    }
+                int friendMod = 0;
+                if(averageFriend != null) {
+                    friendMod = -averageFriend.distanceSquaredTo(targetLocation);
                 }
 
-                if(potentialEnemies < bestEnemiesSeen) {
+                if(averageEnemy.distanceSquaredTo(targetLocation) + friendMod < bestDistance) {
                     bestDirectionSoFar = dir;
-                    bestEnemiesSeen = potentialEnemies;
-                } 
+                    bestDistance = averageEnemy.distanceSquaredTo(targetLocation);
+                }
             }
         }
 

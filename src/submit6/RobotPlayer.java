@@ -1,6 +1,7 @@
 package submit6;
 
 import battlecode.common.*;
+import battlecode.world.Flag;
 import scala.util.Random;
 
 /**
@@ -76,9 +77,8 @@ public strictfp class RobotPlayer {
         Pathfinding.init(rc);
         Combat.init(rc);
         Utils.init(rc);
-        
-        
-
+        FlagReturn.init(rc);
+    
         //assigning each duck an ID that is based off of when they move 
         //in a turn
         rc.writeSharedArray(SA.INDEXING, rc.readSharedArray(SA.INDEXING) + 1);
@@ -258,17 +258,12 @@ public strictfp class RobotPlayer {
         
         //attempts to return flag to closest spawn location
         //TODO: avoid enemies
+        if(rc.hasFlag() && !hasMyFlag() && Utils.isEnemies()) {
+
+        }
+
         if(rc.hasFlag() && !hasMyFlag()) {
-            target = SA.getLocation(SA.FLAG1);
-            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-            int min = Integer.MAX_VALUE;
-            for(MapLocation spawn : spawnLocs) {
-                if(rc.getLocation().distanceSquaredTo(spawn) < min) {
-                    min = rc.getLocation().distanceSquaredTo(spawn);
-                    target = spawn;
-                }
-            }
-            return target;
+            return FlagReturn.getReturnTarget();
         } 
         
         //controls defense

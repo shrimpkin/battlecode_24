@@ -16,6 +16,7 @@ public class Utils {
         Direction.SOUTHWEST,
         Direction.WEST,
         Direction.NORTHWEST,
+        Direction.CENTER
     };
 
     static final Random rng = new Random(6147);
