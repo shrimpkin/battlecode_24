@@ -45,6 +45,7 @@ public strictfp class RobotPlayer {
                 move();
                 SA.updateMap();
                 heal();
+                defenderBuild(); // probably a better place to put this :/
                 fill();
             }
             
@@ -53,15 +54,11 @@ public strictfp class RobotPlayer {
         }
     }
 
-    public static void bombIfAboutToDie() {
+    public static void bombIfAboutToDie() throws GameActionException {
         if (rc.getHealth() < 100) {
             MapLocation cur = rc.getLocation();
             if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
-                try {
-                    rc.build(TrapType.EXPLOSIVE, cur);
-                } catch (GameActionException e) {
-                    // just continue, dont want to explicit err
-                }
+                rc.build(TrapType.EXPLOSIVE, cur);
             }
         }
     }
@@ -320,12 +317,9 @@ public strictfp class RobotPlayer {
      */
     public static MapLocation getFlagDefense() throws GameActionException {
         switch (ID) {
-            case 1:
-                return SA.getLocation(SA.FLAG1);
-            case 2: 
-                return SA.getLocation(SA.FLAG2);
-            case 3: 
-                return SA.getLocation(SA.FLAG3); 
+            case 1: return SA.getLocation(SA.FLAG1);
+            case 2: return SA.getLocation(SA.FLAG2);
+            case 3: return SA.getLocation(SA.FLAG3); 
         }
 
         return null;
@@ -335,12 +329,13 @@ public strictfp class RobotPlayer {
      * Choosing movement target and attacking 
      */
     public static MapLocation getCombatTarget() throws GameActionException {
-        //attempting to build if enough enemies to lurn into trap
-        if(Utils.getNumEnemies() >= ENEMIES_PER_TRAP) {
-            build();
+        Combat.reset();
+        
+        boolean shouldBuild = Combat.shouldBuild();
+        if(shouldBuild && rc.canBuild(TrapType.EXPLOSIVE, Combat.buildTarget())) {
+            rc.build(TrapType.EXPLOSIVE, Combat.buildTarget());
         }
 
-        Combat.reset();
         boolean shouldRun = Combat.shouldRunAway();
         boolean shouldTrap = Combat.shouldTrap();
 
@@ -350,10 +345,10 @@ public strictfp class RobotPlayer {
             indicator += "TRAP ";
             dir = Combat.getTrapDirection();
         } else if(shouldRun) {
-            indicator += "DEF";
+            indicator += "DEF ";
             dir = Combat.getDefensiveDirection();
         } else {
-            indicator += "OFF";
+            indicator += "OFF ";
             dir = Combat.getOffensiveDirection();
         }
 
@@ -373,6 +368,51 @@ public strictfp class RobotPlayer {
         return targetLocation;
     }
 
+    /**
+     * very niche method that handles passive defender building behavior
+     * namely : tries to place stun on corners whenever possible
+     */
+    public static void defenderBuild() throws GameActionException {
+        if (ID >= 4) return; // not a defender
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 250) return; // can't build: on cool-down / no money
+        // active defense - put bombs on direction closest to the nearest enemy (not in setup)
+        if (enemies.length > 0 && rc.getRoundNum() > 200) {
+            int minDist = Integer.MAX_VALUE; // min for all positions
+            MapLocation target = null;
+            // try and get the direction where the bomb will be closest to an enemy
+            for (Direction dir : Utils.directions){
+                // check minimum distance for the choice of direction
+                MapLocation pos = rc.getLocation().add(dir);
+                if (!rc.canBuild(TrapType.EXPLOSIVE, pos)) continue;
+                int md = Integer.MAX_VALUE; // min dist local
+                for (RobotInfo enemy : enemies) {
+                    md = Math.min(md, enemy.getLocation().distanceSquaredTo(pos));
+                }
+                // better than current best? => update
+                if (md < minDist) {
+                    minDist = md;
+                    target = pos;
+                }
+            }
+            // if target has been chosen, then build a bomb there
+            if (target != null) {
+                rc.build(TrapType.EXPLOSIVE, target);
+                return;
+            }
+        }
+        if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
+        // passive defense - put stun trap on corners to buy time
+        if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
+            for (MapLocation pos : Utils.corners(rc.getLocation())) {
+                MapInfo pinfo = rc.senseMapInfo(pos);
+                if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
+                    rc.build(TrapType.STUN, pos);
+                    return;
+                }
+            }
+        }
+    }
 
     /**
      * Attempts to buy global upgrades
@@ -418,35 +458,11 @@ public strictfp class RobotPlayer {
             }
         }
 
-        if(numEnemies >= 4 && rc.getHealth() <= 900 && numTrapsNearby <= 2) {
+        if(numEnemies >= ENEMIES_PER_TRAP && numTrapsNearby <= 2) {
             if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         }       
-         
-        // int numTraps = 0;
-        // MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-        // for(MapInfo info : mapInfo) {
-        //     if(info.getTrapType() != TrapType.NONE) {
-        //         numTraps++;
-        //     }
-        // }
-
-        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
-        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-        //     }
-        // } 
-
-        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
-        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-        //     }
-        // } 
-
-        // if(rc.getCrumbs() >= 1000 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
-        //     rc.build(TrapType.STUN, rc.getLocation());
-        // }
     }
 
     /**
@@ -463,9 +479,24 @@ public strictfp class RobotPlayer {
     }
 
     public static void heal() throws GameActionException {
+        //heals any friendly robots it can, again prioritize flag bearers and low HP units
+        if (rc.getActionCooldownTurns() > 0) return; // on cooldown
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
+        MapLocation target = null;
+        int minHealth = 1001;
         for(RobotInfo robot : friendlyRobots) {
-            if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
+            if(rc.canHeal(robot.getLocation())) {
+                if (robot.hasFlag()) {
+                    rc.heal(robot.getLocation());
+                    return;
+                } else {
+                    if (robot.getHealth() < minHealth) {
+                        minHealth = robot.getHealth();
+                        target = robot.getLocation();
+                    }
+                }
+            }
         }
+        if (target != null) rc.heal(target);
     }
 }

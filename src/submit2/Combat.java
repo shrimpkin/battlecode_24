@@ -9,6 +9,7 @@ public class Combat {
     static int numEnemiesAttackingUs;
     static int numFriendlies;
     static int numEnemies;
+    static int numTraps;
 
     static RobotInfo[] enemies;
     static RobotInfo[] friendlies;
@@ -37,7 +38,6 @@ public class Combat {
      */
     public static boolean shouldTrap() throws GameActionException {
         indicator += "(f,e): (" + friendlies.length + " " + enemies.length + ")";
-        indicator += !(friendlies.length - enemies.length >= OUTNUMBER);
         return averageTrap != null                                          //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
@@ -79,7 +79,7 @@ public class Combat {
         double averageTrap_x = 0;
         double averageTrap_y = 0;
 
-        double numTraps = 0;
+        numTraps = 0;
 
         for(MapInfo info : mapInfo) {
             if(!info.getTrapType().equals(TrapType.NONE)) {
@@ -91,11 +91,13 @@ public class Combat {
 
         if(numTraps == 0) {
             averageTrap = null;
-            return;
+        } else {
+            averageTrap_x /= numTraps;
+            averageTrap_y /= numTraps;
+            averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
         }
 
-        averageTrap_x /= numTraps;
-        averageTrap_y /= numTraps;
+        
 
         double averageEnemy_x = 0;
         double averageEnemy_y = 0;
@@ -109,8 +111,6 @@ public class Combat {
         averageEnemy_y /= enemies.length;
 
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
-        averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
-        
     }
 
     /**
@@ -221,5 +221,38 @@ public class Combat {
         for(RobotInfo robot : friendlyRobots) {
             if(rc.canHeal(robot.getLocation())) rc.heal(robot.getLocation());
         }
+    }
+
+    /**
+     * 
+     */
+    public static boolean shouldBuild() throws GameActionException {
+        boolean output =    enemies.length >= 3 
+                            && (!(friendlies.length >= enemies.length * OUTNUMBER) || (rc.getRoundNum() > 190 && rc.getRoundNum() < 200)) 
+                            && numTraps <= 2
+                            && averageEnemy != null;
+
+        if(output) indicator += "BUILD ";
+        return output;
+    }
+
+    /**
+     * Returns a MapLocation to build on that is best
+     * @return
+     */
+    public static MapLocation buildTarget() throws GameActionException {
+        MapLocation bestLocationSoFar = rc.getLocation();
+        int minDistance = Integer.MAX_VALUE;
+
+        for(Direction dir : Utils.directions) {
+            MapLocation target = rc.getLocation().add(dir);
+
+            if(target != null && target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.EXPLOSIVE, target)) {
+                minDistance = target.distanceSquaredTo(averageEnemy);
+                bestLocationSoFar = target;
+            }
+        }
+
+        return bestLocationSoFar;
     }
 }

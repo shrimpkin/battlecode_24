@@ -44,4 +44,22 @@ public class Utils {
     public static Direction randomDirection() throws GameActionException {
         return directions[rng.nextInt(directions.length)]; 
     }
+
+    public static MapLocation[] corners(MapLocation pos){
+        return new MapLocation[]{
+                pos.add(Direction.SOUTHEAST),
+                pos.add(Direction.SOUTHWEST),
+                pos.add(Direction.NORTHWEST),
+                pos.add(Direction.NORTHEAST)
+        };
+    }
+
+    public static MapLocation[] cardinals(MapLocation pos){
+        return new MapLocation[]{
+                pos.add(Direction.NORTH),
+                pos.add(Direction.SOUTH),
+                pos.add(Direction.EAST),
+                pos.add(Direction.WEST)
+        };
+    }
 }

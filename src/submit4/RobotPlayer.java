@@ -1,4 +1,4 @@
-package submit4_0;
+package submit4;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
