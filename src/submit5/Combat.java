@@ -175,8 +175,15 @@ public class Combat {
             }
         }
 
+        // If we haven't found a direction lets just pick one that's valid.
         if(bestDirectionSoFar == Direction.CENTER) {
-            bestDirectionSoFar = rc.getLocation().directionTo(enemies[0].getLocation());
+            for (RobotInfo x: enemies) {
+                Direction d = rc.getLocation().directionTo(x.getLocation());
+                if (rc.canMove(d)) {
+                    bestDirectionSoFar = d;
+                    break;
+                }
+            }
         }
 
         return bestDirectionSoFar;
