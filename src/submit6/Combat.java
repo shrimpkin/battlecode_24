@@ -21,18 +21,21 @@ public class Combat {
 
     static int OUTNUMBER = 2;
     static int HEALTH_TO_RUNAWAY = 600;
-
+    static int IS_STUCK_TURNS = 3;
     static enum combatMode {OFF, DEF, TRAP, NONE};
     static combatMode[] combatModeLog;
+    static MapLocation[] combatLocations;
+
+
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
         indicator = "";
 
         combatModeLog = new combatMode[2001];
-        for(int i = 0; i < combatModeLog.length; i++) {
-            combatModeLog[i] = combatMode.NONE;
-        }
+        combatModeLog[0] = combatMode.NONE;
+
+        combatLocations = new MapLocation[2001];
     }
 
     /**
@@ -55,11 +58,24 @@ public class Combat {
         return (combatModeLog[rc.getRoundNum() - 1].equals(combatMode.TRAP) && !combatModeLog[rc.getRoundNum() - 2].equals(combatMode.TRAP));
     }
 
+    public static boolean isStuck() throws GameActionException {
+        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
+            int index = rc.getRoundNum() - i;
+
+            if(index < 0) return false;
+            if(combatLocations[index] == null) return false;
+            if(!combatLocations[index].equals(rc.getLocation())) return false;
+        }
+
+        return true;
+    }
+
     public static void reset() throws GameActionException {
         indicator = "";
         resetShouldRunAway();
         resetShouldTrap();
     }
+
     /**
      * resets all constants used in the decision of whether to run away
      * @throws GameActionException
@@ -308,6 +324,7 @@ public class Combat {
 
             indicator += combatModeLog[i] + " ";
         }
+        indicator += isStuck() + " ";
         return targetLocation;
     }
 }

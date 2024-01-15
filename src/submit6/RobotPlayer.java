@@ -27,11 +27,14 @@ public strictfp class RobotPlayer {
         rc = m_rc;
 
         while(true) {
+
             //used for debugging, only value that should be passed through rc.setIndicator()
             //can be seen by hovering over robot
             indicator = "";
 
             if(rc.getRoundNum() == 1) init();
+            Combat.combatModeLog[rc.getRoundNum()] = Combat.combatMode.NONE;
+
             if(rc.getRoundNum() % 750 == 0) globals();
 
             //tries to spawn in the robot if we can
@@ -211,7 +214,6 @@ public strictfp class RobotPlayer {
             return target;
         } 
 
-        
         indicator += "t: ";
         target = getTarget();
         
