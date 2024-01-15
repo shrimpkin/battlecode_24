@@ -18,7 +18,8 @@ public class Combat {
     static MapLocation averageTrap;
     static MapLocation flagLocation; // closest of our flags being captured by the enemies
 
-    static int OUTNUMBER = 2;
+    static double OUTNUMBER = 1.1;
+    static double RUN_AWAY_HEALTH = 600;
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
@@ -32,7 +33,7 @@ public class Combat {
     public static boolean shouldRunAway() throws GameActionException {
         if (enemyHasFlag) return false;
         return (numFriendlies + 1 < numEnemiesAttackingUs)  // we're outnumbered
-                || rc.getHealth() < 600; // we're low health
+                || rc.getHealth() < RUN_AWAY_HEALTH; // we're low health
     }
 
     /**
@@ -40,11 +41,9 @@ public class Combat {
      */
     public static boolean shouldTrap() throws GameActionException {
         if (enemyHasFlag) return false;
-        indicator += "(f,e): (" + friendlies.length + " " + enemies.length + ")";
-        indicator += !(friendlies.length - enemies.length >= OUTNUMBER);
         return averageTrap != null                                          //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
-                && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
+                && !(friendlies.length >= (int) Math.pow(enemies.length + 1, OUTNUMBER));      //make sure we don't already outnumber by a lot
     }
 
     public static void reset() throws GameActionException {
@@ -127,7 +126,7 @@ public class Combat {
     }
 
     /**
-     *  Gets the direction that result in the robot being behind traps
+     *  Gets the direction that result in the enemies walking towards the traps
      */
     public static Direction getTrapDirection() throws GameActionException{
         return averageEnemy.directionTo(averageTrap);
