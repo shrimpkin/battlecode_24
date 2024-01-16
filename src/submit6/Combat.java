@@ -204,12 +204,6 @@ public class Combat {
         for(Direction dir : dirsToConsider) {
             if(rc.canMove(dir)) {
                 MapLocation targetLocation = rc.getLocation().add(dir);
-                //TODO: implement this in a useful way
-                int friendMod = 0;
-                if(averageFriend != null) {
-                    friendMod = -averageFriend.distanceSquaredTo(targetLocation);
-                }
-
                 if(averageEnemy.distanceSquaredTo(targetLocation) < bestDistance) {
                     bestDirectionSoFar = dir;
                     bestDistance = averageEnemy.distanceSquaredTo(targetLocation);
@@ -339,7 +333,7 @@ public class Combat {
         }
 
         boolean shouldRun = Combat.shouldRunAway();
-        boolean shouldTrap = Combat.shouldTrap() || shouldContinueTrap();
+        boolean shouldTrap = Combat.shouldTrap();
 
         Direction dir;
 
@@ -371,6 +365,7 @@ public class Combat {
     
             indicator += "(" + modeLog[i] + "," +  actionLog[i] + ") ";
         }
+        
         indicator += isUseless() + " ";
         return targetLocation;
     }

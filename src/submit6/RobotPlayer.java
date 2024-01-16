@@ -60,18 +60,6 @@ public strictfp class RobotPlayer {
         }
     }
 
-    //TODO: Is this useful, if in combat it will prolly trap anyway 
-    //could cause a unit to just bomb in useless locations 
-    //doesn't seem to improve bot performance
-    public static void bombIfAboutToDie() throws GameActionException {
-        if (rc.getHealth() < 100) {
-            MapLocation cur = rc.getLocation();
-            if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
-                rc.build(TrapType.EXPLOSIVE, cur);
-            }
-        }
-    }
-
     /**
      * handles initializing all static fields and assigning each robot an ID
      */
@@ -82,13 +70,9 @@ public strictfp class RobotPlayer {
         Utils.init(rc);
         FlagReturn.init(rc);
     
-        //assigning each duck an ID that is based off of when they move 
-        //in a turn
+        //assigning each duck an ID that is based off of when they move in the turn
         rc.writeSharedArray(SA.INDEXING, rc.readSharedArray(SA.INDEXING) + 1);
         ID = rc.readSharedArray(SA.INDEXING);
-        if(rc.readSharedArray(SA.INDEXING) == 50) {
-            rc.writeSharedArray(SA.INDEXING, 0);
-        }
     }
 
     /**
@@ -206,7 +190,7 @@ public strictfp class RobotPlayer {
         MapLocation target;
 
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag() && !Combat.isUseless()) {
+        if(Utils.isEnemies() && !rc.hasFlag()) {
             target = Combat.getCombatTarget();
             
             if(ID <= 3) {
@@ -219,7 +203,6 @@ public strictfp class RobotPlayer {
             return target;
         }
 
-        indicator += "t: ";
         target = getTarget();
         
         //used as random movement if we don't have a target
@@ -228,25 +211,19 @@ public strictfp class RobotPlayer {
 
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
-
-            if(rc.canFill(rc.getLocation().add(towards))) {
-                rc.fill(rc.getLocation().add(towards));
-            }
-
             Pathfinding.initTurn();
             Pathfinding.move(target);
         }
         
-        if(rc.getRoundNum() < 150 && rc.canMove(dir)) 
-            rc.move(dir);
+        if(rc.getRoundNum() < 150 && rc.canMove(dir)) rc.move(dir);
         
-        //updating shared array that a flag was dropped off during 
-        //this robots movement
+        //updating shared array that a flag was dropped off during this robots movement
         if(rc.hasFlag() != hasFlag) {
             rc.writeSharedArray(SA.enemyFlag, 0);
             rc.writeSharedArray(SA.escort, 0);
         }
-        indicator += target + "\n";
+
+        indicator += "t: " + target + "\n";
         return target;
     }
 
@@ -386,57 +363,13 @@ public strictfp class RobotPlayer {
     }
 
     /**
-     * Determines if the robot should build, and what it should build
-     * Currently just goes for explosive traps if there are a lot of nearby
-     * TODO: This method is not in use
-     */
-    public static void build() throws GameActionException {
-        MapLocation[] allySpawnLocs = rc.getAllySpawnLocations();
-        for(MapLocation allySpawnLoc : allySpawnLocs) {
-            int numTrapsNearby = 0;
-            MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(allySpawnLoc, 4);
-            for(MapInfo nearbyLoc : nearbyLocs) {
-                if(nearbyLoc.getTrapType() != TrapType.NONE) {
-                    numTrapsNearby += 1;
-                }
-            }
-            if(numTrapsNearby >= 1) {
-                continue;
-            } else {
-                if(rc.canBuild(TrapType.EXPLOSIVE, allySpawnLoc)) {
-                    rc.build(TrapType.EXPLOSIVE, allySpawnLoc);
-                    break;
-                }
-            }
-        }
-
-        // putting down bombs when there are lots of enemies nearby and fighting
-        int numEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length;
-        int numTrapsNearby = 0;
-        MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(rc.getLocation(), -1);
-        for(MapInfo nearbyLoc : nearbyLocs) {
-            if(nearbyLoc.getTrapType() != TrapType.NONE) {
-                numTrapsNearby += 1;
-            }
-        }
-
-        if(numEnemies >= ENEMIES_PER_TRAP && numTrapsNearby <= 2) {
-            if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-            }
-        }       
-    }
-
-    /**
      * Fills in a random tiles if we have extra action and see no enemies
      * TODO: Is this a reasonable way to just not deal with water
      */
     public static void fill() throws GameActionException {
-        if(!Utils.isEnemies()) {
-            MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-            for(MapInfo info : mapInfo) {
-                if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
-            }
+        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
+        for(MapInfo info : mapInfo) {
+            if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
         }
     }
 
