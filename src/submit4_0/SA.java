@@ -15,20 +15,16 @@ public class SA {
     public static int FLAG3 = 2;
     public static int enemyFlag = 3;
 
-<<<<<<< Updated upstream
-=======
+
     //for the first turn the location is also used for indexing all robots
->>>>>>> Stashed changes
     public static int INDEXING = 4;
 
     public static int e_loc_start = 5;
     public static int escort = 6;
     public static int defend = 7;
-<<<<<<< Updated upstream
     public static int f_loc_start = 57;
-=======
-    public static int f_loc_start = 56;
->>>>>>> Stashed changes
+
+    
 
     static RobotController rc;
     
