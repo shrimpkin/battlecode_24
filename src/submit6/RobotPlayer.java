@@ -35,6 +35,7 @@ public strictfp class RobotPlayer {
             if(rc.getRoundNum() == 1) init();
             Combat.modeLog[rc.getRoundNum()] = Combat.combatMode.NONE;
             Combat.actionLog[rc.getRoundNum()] = Combat.actionMode.NONE;
+            
 
             if(rc.getRoundNum() % 750 == 0) globals();
 
@@ -45,6 +46,7 @@ public strictfp class RobotPlayer {
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
+                Combat.reset();
                 flagStuff();
                 move();          //move will also do all combat methods if enemies can be seen      
                 SA.updateMap();  //want to do this after moving, maximize ability to see new flags
@@ -202,6 +204,7 @@ public strictfp class RobotPlayer {
      */
     public static MapLocation move() throws GameActionException {
         MapLocation target;
+
         //this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag() && !Combat.isUseless()) {
             target = Combat.getCombatTarget();
@@ -214,7 +217,7 @@ public strictfp class RobotPlayer {
 
             indicator += "c: " + target + " " + Combat.indicator;
             return target;
-        } 
+        }
 
         indicator += "t: ";
         target = getTarget();

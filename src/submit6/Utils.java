@@ -63,4 +63,9 @@ public class Utils {
                 pos.add(Direction.WEST)
         };
     }
+
+    public static void handleException(String s) {
+        System.out.println(s + "at turn " + rc.getRoundNum() + " at " + rc.getLocation());
+        Clock.yield();
+    }
 }

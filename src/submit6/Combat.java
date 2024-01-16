@@ -19,6 +19,7 @@ public class Combat {
     static MapLocation averageEnemy;
     static MapLocation averageFriend;
     static MapLocation averageTrap;
+    static int averageFriendHealth;
 
     static int OUTNUMBER = 2;
     static int HEALTH_TO_RUNAWAY = 600;
@@ -54,8 +55,7 @@ public class Combat {
     public static void reset() throws GameActionException {
         locations[rc.getRoundNum()] = rc.getLocation();
         indicator = "";
-        resetShouldRunAway();
-        resetShouldTrap();
+        reset_m();
     }
 
     /**
@@ -69,13 +69,21 @@ public class Combat {
      * Should the robot attempt to make the enemies walk into the traps
      */
     public static boolean shouldTrap() throws GameActionException {
+        if(enemies == null) Utils.handleException("Enemies is null in shouldTrap() ");
+        if(friendlies == null) Utils.handleException("Friendlies is null in shouldTrap() ");
+
         return averageTrap != null                                          //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
     }
 
+    /**
+     * Continues to trap for another turn
+     * TODO: implement this better
+     */
     public static boolean shouldContinueTrap() throws GameActionException {
-        return (modeLog[rc.getRoundNum() - 1].equals(combatMode.TRAP) && !modeLog[rc.getRoundNum() - 2].equals(combatMode.TRAP));
+        return false;
+        //return (modeLog[rc.getRoundNum() - 1].equals(combatMode.TRAP) && !modeLog[rc.getRoundNum() - 2].equals(combatMode.TRAP));
     }
 
     /**
@@ -96,10 +104,10 @@ public class Combat {
     }
 
     /**
-     * resets all constants used in the decision of whether to run away
+     * Updates average trap and enemy locations
      * @throws GameActionException
      */
-    public static void resetShouldRunAway() throws GameActionException {
+    public static void reset_m() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
 
@@ -111,14 +119,7 @@ public class Combat {
         
         numEnemiesAttackingUs = nearEnemies.length;
         numFriendliesWithUs = nearFriends.length;
-    }
 
-
-    /**
-     * Updates average trap and enemy locations
-     * @throws GameActionException
-     */
-    public static void resetShouldTrap() throws GameActionException {
         MapInfo[] mapInfo = rc.senseNearbyMapInfos();
         
         double averageTrap_x = 0;
@@ -142,35 +143,40 @@ public class Combat {
             averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
         }
 
-        double averageEnemy_x = 0;
-        double averageEnemy_y = 0;
+        if(enemies.length == 0) {
+            averageEnemy = null;
+        } else {
+            double averageEnemy_x = 0;
+            double averageEnemy_y = 0;
 
-        for(RobotInfo robot : enemies) {
-            averageEnemy_x += robot.getLocation().x;
-            averageEnemy_y += robot.getLocation().y;
-        }
+            for(RobotInfo robot : enemies) {
+                averageEnemy_x += robot.getLocation().x;
+                averageEnemy_y += robot.getLocation().y;
+            }
 
-        averageEnemy_x /= enemies.length;
-        averageEnemy_y /= enemies.length;
+            averageEnemy_x /= enemies.length;
+            averageEnemy_y /= enemies.length;
 
-        averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
+            averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
+        }        
 
-        double averageFriend_x = 0;
-        double averageFriend_y = 0;
-        for(RobotInfo robot : friendlies) {
-            if(!robot.getLocation().equals(rc.getLocation())) {
+        if(friendlies == null || friendlies.length <= 1) {
+            averageFriend = null;
+            averageFriendHealth = rc.getHealth();
+        } else {
+            double averageFriend_x = 0;
+            double averageFriend_y = 0;
+            double averageFriendHealth = 0;
+            for(RobotInfo robot : friendlies) {
                 averageFriend_x += robot.getLocation().x;
                 averageFriend_x += robot.getLocation().y;
+                averageFriendHealth += robot.getHealth();
             }
-        }
 
-        if(friendlies.length == 0 || friendlies.length == 1) {
-            averageFriend = null;
-        } else {
-            averageFriend_x /= friendlies.length;
-            averageFriend_y /= friendlies.length;
+            averageFriend_x /= (friendlies.length - 1);
+            averageFriend_y /= (friendlies.length - 1);
             averageFriend = new MapLocation((int) averageFriend_x, (int) averageFriend_y);
-
+            averageFriendHealth /= friendlies.length;
         }
     }
 
@@ -178,6 +184,9 @@ public class Combat {
      *  Gets the direction that result in the robot being behind traps
      */
     public static Direction getTrapDirection() throws GameActionException{
+        if(averageTrap == null) Utils.handleException("No available traps");
+        if(averageEnemy == null) Utils.handleException("No available enemies");
+
         return averageEnemy.directionTo(averageTrap);
     }
 
@@ -185,6 +194,9 @@ public class Combat {
      * Gets the direction that has the least potential attacking enemies
      */
     public static Direction getDefensiveDirection() throws GameActionException{
+        if(averageEnemy == null) Utils.handleException("AverageEnemy is null in getDefensiveDirection() ");
+        if(enemies.length == 0) Utils.handleException("There are no enemies in getDefensiveDirection() ");
+
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
         int bestDistance = Integer.MAX_VALUE;
@@ -192,12 +204,13 @@ public class Combat {
         for(Direction dir : dirsToConsider) {
             if(rc.canMove(dir)) {
                 MapLocation targetLocation = rc.getLocation().add(dir);
+                //TODO: implement this in a useful way
                 int friendMod = 0;
                 if(averageFriend != null) {
                     friendMod = -averageFriend.distanceSquaredTo(targetLocation);
                 }
 
-                if(averageEnemy.distanceSquaredTo(targetLocation) + friendMod < bestDistance) {
+                if(averageEnemy.distanceSquaredTo(targetLocation) < bestDistance) {
                     bestDirectionSoFar = dir;
                     bestDistance = averageEnemy.distanceSquaredTo(targetLocation);
                 }
@@ -211,6 +224,9 @@ public class Combat {
      * returns the direction that allows for hitting an enemy and getting hit by the least enemies
      */
     public static Direction getOffensiveDirection() throws GameActionException {
+        if(enemies == null || enemies.length < 1) Utils.handleException("There are no enemies in getOffensiveDirection() ");
+
+
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
         int minEnemies = Integer.MAX_VALUE;
@@ -279,6 +295,9 @@ public class Combat {
      * decides if building a trap would be useful for this combat
      */
     public static boolean shouldBuild() throws GameActionException {
+        if(enemies == null) Utils.handleException("Enemies is null in shouldBuild() ");
+        if(friendlies == null) Utils.handleException("Friendlies is null in shouldBuild() ");
+
         boolean output =    enemies.length >= 3 
                             && ((!(friendlies.length >= enemies.length * OUTNUMBER) && rc.getRoundNum() >= 200) || (rc.getRoundNum() > 190 && rc.getRoundNum() < 200)) 
                             && numTraps <= 2
@@ -293,6 +312,8 @@ public class Combat {
      * currently looks for location nearest to enemies
      */
     public static MapLocation buildTarget() throws GameActionException {
+        if(averageEnemy == null) Utils.handleException("Enemies is null in buildTarget() ");
+
         MapLocation bestLocationSoFar = rc.getLocation();
         int minDistance = Integer.MAX_VALUE;
 
@@ -311,9 +332,7 @@ public class Combat {
     /**
      * Choosing movement target and attacking 
      */
-    public static MapLocation getCombatTarget() throws GameActionException {
-        Combat.reset();
-        
+    public static MapLocation getCombatTarget() throws GameActionException {   
         boolean shouldBuild = Combat.shouldBuild();
         if(shouldBuild && rc.canBuild(TrapType.EXPLOSIVE, Combat.buildTarget())) {
             rc.build(TrapType.EXPLOSIVE, Combat.buildTarget());
@@ -340,9 +359,9 @@ public class Combat {
         MapLocation targetLocation = rc.getLocation().add(dir);
         if(shouldRun || shouldTrap) {
             Combat.attack();
-            Pathfinding.move(targetLocation);
+            if(rc.canMove(dir)) rc.move(dir);
         } else {
-            Pathfinding.move(targetLocation);
+            if(rc.canMove(dir)) rc.move(dir);
             Combat.attack();
         }
 
