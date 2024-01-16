@@ -28,7 +28,6 @@ public strictfp class RobotPlayer {
         rc = m_rc;
 
         while(true) {
-
             //used for debugging, only value that should be passed through rc.setIndicator()
             //can be seen by hovering over robot
             indicator = "";
@@ -46,10 +45,9 @@ public strictfp class RobotPlayer {
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
-                bombIfAboutToDie();
                 flagStuff();
-                move();
-                SA.updateMap();
+                move();          //move will also do all combat methods if enemies can be seen      
+                SA.updateMap();  //want to do this after moving, maximize ability to see new flags
                 heal();
                 defenderBuild(); // probably a better place to put this :/
                 fill();
@@ -60,6 +58,9 @@ public strictfp class RobotPlayer {
         }
     }
 
+    //TODO: Is this useful, if in combat it will prolly trap anyway 
+    //could cause a unit to just bomb in useless locations 
+    //doesn't seem to improve bot performance
     public static void bombIfAboutToDie() throws GameActionException {
         if (rc.getHealth() < 100) {
             MapLocation cur = rc.getLocation();
@@ -233,7 +234,8 @@ public strictfp class RobotPlayer {
             Pathfinding.move(target);
         }
         
-        if(rc.canMove(dir)) rc.move(dir);
+        if(rc.getRoundNum() < 150 && rc.canMove(dir)) 
+            rc.move(dir);
         
         //updating shared array that a flag was dropped off during 
         //this robots movement
@@ -257,14 +259,11 @@ public strictfp class RobotPlayer {
         MapLocation target = null;
         
         //attempts to return flag to closest spawn location
-        //TODO: avoid enemies
-        if(rc.hasFlag() && !hasMyFlag() && Utils.isEnemies()) {
-
-        }
-
         if(rc.hasFlag() && !hasMyFlag()) {
-            return FlagReturn.getReturnTarget();
-        } 
+            target = FlagReturn.getReturnTarget();
+            indicator += FlagReturn.indicator;
+            return target;
+        }
         
         //controls defense
         if(ID <= 3) {            
@@ -301,6 +300,7 @@ public strictfp class RobotPlayer {
             if(target == null && rc.getRoundNum() > 150) {
                 target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
             }
+
             return target;
         } 
         
@@ -385,6 +385,7 @@ public strictfp class RobotPlayer {
     /**
      * Determines if the robot should build, and what it should build
      * Currently just goes for explosive traps if there are a lot of nearby
+     * TODO: This method is not in use
      */
     public static void build() throws GameActionException {
         MapLocation[] allySpawnLocs = rc.getAllySpawnLocations();
@@ -425,7 +426,7 @@ public strictfp class RobotPlayer {
 
     /**
      * Fills in a random tiles if we have extra action and see no enemies
-     * @throws GameActionException
+     * TODO: Is this a reasonable way to just not deal with water
      */
     public static void fill() throws GameActionException {
         if(!Utils.isEnemies()) {
@@ -436,6 +437,9 @@ public strictfp class RobotPlayer {
         }
     }
 
+    /**
+     * Heals any friendly robots it can, prioritize flag bearers and low HP units
+     */
     public static void heal() throws GameActionException {
         //heals any friendly robots it can, again prioritize flag bearers and low HP units
         if (rc.getActionCooldownTurns() > 0) return; // on cooldown

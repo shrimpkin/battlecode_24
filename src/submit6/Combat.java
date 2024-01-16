@@ -158,11 +158,13 @@ public class Combat {
         double averageFriend_x = 0;
         double averageFriend_y = 0;
         for(RobotInfo robot : friendlies) {
-            averageFriend_x += robot.getLocation().x;
-            averageFriend_x += robot.getLocation().y;
+            if(!robot.getLocation().equals(rc.getLocation())) {
+                averageFriend_x += robot.getLocation().x;
+                averageFriend_x += robot.getLocation().y;
+            }
         }
 
-        if(friendlies.length == 0) {
+        if(friendlies.length == 0 || friendlies.length == 1) {
             averageFriend = null;
         } else {
             averageFriend_x /= friendlies.length;
@@ -170,8 +172,6 @@ public class Combat {
             averageFriend = new MapLocation((int) averageFriend_x, (int) averageFriend_y);
 
         }
-
-        
     }
 
     /**
@@ -273,20 +273,10 @@ public class Combat {
         if(target != null && rc.canAttack(target)) {
             rc.attack(target);
         }
-
-        
-        //heals any friendly robots it  can
-        RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
-        for(RobotInfo robot : friendlyRobots) {
-            if(rc.canHeal(robot.getLocation()))  {
-                actionLog[rc.getRoundNum()] = actionMode.HEAL;
-                rc.heal(robot.getLocation());
-            }
-        }
     }
 
     /**
-     * 
+     * decides if building a trap would be useful for this combat
      */
     public static boolean shouldBuild() throws GameActionException {
         boolean output =    enemies.length >= 3 
@@ -300,7 +290,7 @@ public class Combat {
 
     /**
      * Returns a MapLocation to build on that is best
-     * @return
+     * currently looks for location nearest to enemies
      */
     public static MapLocation buildTarget() throws GameActionException {
         MapLocation bestLocationSoFar = rc.getLocation();
@@ -346,13 +336,13 @@ public class Combat {
         }
 
         if(dir == null) dir = Direction.CENTER;
-
+        
         MapLocation targetLocation = rc.getLocation().add(dir);
         if(shouldRun || shouldTrap) {
             Combat.attack();
-            if(rc.canMove(dir)) rc.move(dir);
+            Pathfinding.move(targetLocation);
         } else {
-            if(rc.canMove(dir)) rc.move(dir);
+            Pathfinding.move(targetLocation);
             Combat.attack();
         }
 

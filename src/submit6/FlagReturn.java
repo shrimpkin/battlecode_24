@@ -4,44 +4,42 @@ import battlecode.common.*;
 
 public class FlagReturn {
     static RobotController rc;
+    static String indicator;
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
     }
 
+    /**
+     * Gets return target for robot with flag
+     * Takes into account enemies and move away from them if possible
+     */
     public static MapLocation getReturnTarget() throws GameActionException {
-        if(Utils.isEnemies()) return enemies();
-        else return noEnemies();
+        indicator = "";
+        if(Utils.isEnemies()) {
+            Combat.reset();
+            indicator += "ENM ";
+            return enemies();
+        } else {
+            indicator += "NEN ";
+            return noEnemies();
+        }
     }
 
     public static MapLocation enemies() throws GameActionException {
-        if(Combat.averageFriend != null) {
-            return towardsFriends();
+        //this makes sure that if we are already on the other side of the enemies that we 
+        if(noEnemies().distanceSquaredTo(rc.getLocation()) < Combat.averageEnemy.distanceSquaredTo(noEnemies())) {
+            indicator += "NEN ";
+            noEnemies();
         }
         
+        indicator += "RAW ";
         return runAway();
-
     }
 
-    public static MapLocation towardsFriends() throws GameActionException {
-        int minDistance = Integer.MAX_VALUE;
-        MapLocation bestLocationSoFar = rc.getLocation();
-
-        for(Direction dir : Utils.directions) {
-
-            if(rc.canMove(dir)) {
-                MapLocation target = rc.getLocation().add(dir);
-
-                if(target.distanceSquaredTo(Combat.averageFriend) < minDistance) {
-                    bestLocationSoFar = target;
-                    minDistance = target.distanceSquaredTo(Combat.averageFriend);
-                }
-            }
-        }
-
-        return bestLocationSoFar;
-    }
-
+    /**
+     * Attempting to avoid enemies
+     */
     public static MapLocation runAway() throws GameActionException {
         int maxDistance = 0;
         MapLocation bestLocationSoFar = rc.getLocation();
@@ -60,6 +58,9 @@ public class FlagReturn {
         return bestLocationSoFar;
     }
 
+    /**
+     * If we sense no enemies then the robot will simply run straight towards the nearest spawn zone
+     */
     public static MapLocation noEnemies() throws GameActionException {
         MapLocation target = SA.getLocation(SA.FLAG1);
         MapLocation[] spawnLocs = rc.getAllySpawnLocations();
