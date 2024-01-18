@@ -31,8 +31,8 @@ public strictfp class RobotPlayer {
             indicator = ID + ": ";
 
             if(rc.getRoundNum() == 1) init();
-            Combat.modeLog[rc.getRoundNum()] = Combat.combatMode.NONE;
-            Combat.actionLog[rc.getRoundNum()] = Combat.actionMode.NONE;
+            Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
+            Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
 
             //tries to spawn in the robot if we can
             if(!rc.isSpawned()) {
@@ -195,11 +195,11 @@ public strictfp class RobotPlayer {
      * Determines where the robot should move on the given turn
      * Also calls a combat method if there are visible enemies
      */
-    public static MapLocation move() throws GameActionException {
+    public static void move() throws GameActionException {
         MapLocation target;
         //this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag()) {
-            target = Combat.getCombatTarget();
+            Combat.runCombat();
             
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
@@ -207,8 +207,8 @@ public strictfp class RobotPlayer {
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
             }
 
-            indicator += "c: " + target + " " + Combat.indicator;
-            return target;
+            indicator += "c: " + Combat.target + " " + Combat.indicator;
+            return;
         } 
         
         indicator += "t: ";
@@ -238,7 +238,6 @@ public strictfp class RobotPlayer {
             rc.writeSharedArray(SA.escort, 0);
         }
         indicator += target + "\n";
-        return target;
     }
 
     /**

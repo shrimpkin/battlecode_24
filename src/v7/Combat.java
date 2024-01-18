@@ -20,23 +20,25 @@ public class Combat {
 
     static int OUTNUMBER = 2;
 
-    static enum combatMode {OFF, DEF, TRAP, NONE};
-    static enum actionMode {HEAL, ATT, NONE};
-    static combatMode[] modeLog;
+    static enum CombatMode {OFF, DEF, TRAP, NONE};
+    static enum ActionMode {HEAL, ATT, NONE};
+    static CombatMode[] modeLog;
     static MapLocation[] locations;
-    static actionMode[] actionLog;
+    static ActionMode[] actionLog;
+
+    static MapLocation target;
 
     public static void init(RobotController r) throws GameActionException {
         rc = r;
         indicator = "";
 
-        modeLog = new combatMode[2001];
-        modeLog[0] = combatMode.NONE;
+        modeLog = new CombatMode[2001];
+        modeLog[0] = CombatMode.NONE;
 
         locations = new MapLocation[2001];
 
-        actionLog = new actionMode[2001];
-        actionLog[0] = actionMode.NONE;
+        actionLog = new ActionMode[2001];
+        actionLog[0] = ActionMode.NONE;
     }
 
     /**
@@ -142,7 +144,7 @@ public class Combat {
         int bestEnemiesSeen = Integer.MAX_VALUE;
 
         for(Direction dir : dirsToConsider) {
-            if(rc.canMove(dir)) {
+            if(rc.canMove(dir) || dir.equals(Direction.CENTER)) {
                 MapLocation targetLocation = rc.getLocation().add(dir);
                 int potentialEnemies = 0;
                 for(RobotInfo enemy: enemies) {
@@ -171,7 +173,7 @@ public class Combat {
         int minEnemies = Integer.MAX_VALUE;
 
         for(Direction dir : dirsToConsider) {
-            if(rc.canMove(dir)) {
+            if(rc.canMove(dir) || dir.equals(Direction.CENTER)) {
                 int numEnemies = 0;
                 MapLocation targetLocation = rc.getLocation().add(dir);
 
@@ -210,6 +212,11 @@ public class Combat {
 
     }
 
+    //TODO: Implement a method that will attempt to grab flag
+    public static Direction getFlagOffensiveDirection() throws GameActionException {
+        return null;
+    }
+
     /**
      * Attacks the enemy with the flag
      * Then the enemy with the lowest health
@@ -243,7 +250,6 @@ public class Combat {
             rc.attack(target);
         }
 
-        
         //heals any friendly robots it  can
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         for(RobotInfo robot : friendlyRobots) {
@@ -284,37 +290,33 @@ public class Combat {
         return bestLocationSoFar;
     }
 
+    public static void build() {
+
+    }
+
     /**
      * Choosing movement target and attacking 
      */
-    public static MapLocation getCombatTarget() throws GameActionException {
+    public static void runCombat() throws GameActionException {
         Combat.reset();
+        CombatMode mode = CombatMode.OFF;
+
+        if(Combat.shouldTrap()) mode = CombatMode.TRAP;
+        else if(Combat.shouldRunAway()) mode = CombatMode.DEF;
         
-        boolean shouldBuild = Combat.shouldBuild();
-        if(shouldBuild && rc.canBuild(TrapType.EXPLOSIVE, Combat.buildTarget())) {
-            rc.build(TrapType.EXPLOSIVE, Combat.buildTarget());
+
+        Direction dir = Direction.CENTER;
+
+        switch(mode) {
+            case TRAP: dir = Combat.getTrapDirection();         break;
+            case DEF : dir = Combat.getDefensiveDirection();    break;
+            case OFF : dir = Combat.getOffensiveDirection();    break;
+            case NONE: break;
         }
+       
+        modeLog[rc.getRoundNum()] = mode;
 
-        boolean shouldRun = Combat.shouldRunAway();
-        boolean shouldTrap = Combat.shouldTrap();
-
-        Direction dir;
-
-        if(shouldTrap) {
-            modeLog[rc.getRoundNum()] = combatMode.TRAP;
-            dir = Combat.getTrapDirection();
-        } else if(shouldRun) {
-            modeLog[rc.getRoundNum()] = combatMode.DEF;
-            dir = Combat.getDefensiveDirection();
-        } else {
-            modeLog[rc.getRoundNum()] = combatMode.OFF;
-            dir = Combat.getOffensiveDirection();
-        }
-
-        if(dir == null) dir = Direction.CENTER;
-
-        MapLocation targetLocation = rc.getLocation().add(dir);
-        if(shouldRun || shouldTrap) {
+        if(mode.equals(CombatMode.TRAP) || mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if(rc.canMove(dir)) rc.move(dir);
         } else {
@@ -322,12 +324,18 @@ public class Combat {
             Combat.attack();
         }
 
+        updateIndicator();
+        target = rc.getLocation().add(dir);
+    }
+
+    /**
+     * Adds in all relevant indicator stuff to the string  
+     */
+    public static void updateIndicator() {
         for(int i = rc.getRoundNum(); i > 0; i--) {
             if(rc.getRoundNum() - i > 2) break;
     
             indicator += "(" + modeLog[i] + "," +  actionLog[i] + ") ";
         }
-
-        return targetLocation;
     }
 }
