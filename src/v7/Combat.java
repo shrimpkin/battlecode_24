@@ -20,7 +20,7 @@ public class Combat {
 
     static int OUTNUMBER = 2;
 
-    static enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, NONE};
+    static enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE};
     static enum ActionMode {HEAL, ATT, NONE};
     static CombatMode[] modeLog;
     static MapLocation[] locations;
@@ -224,9 +224,50 @@ public class Combat {
 
     }
 
-    //TODO: Implement a method that will attempt to grab flag
+    /**
+     * 
+     * @return
+     * @throws GameActionException
+     */
     public static Direction getFlagOffensiveDirection() throws GameActionException {
+        return rc.getLocation().directionTo(getFlagTarget().getLocation());
+    }
+
+    public static FlagInfo getFlagTarget() throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
+
+        for(FlagInfo flag : flags) {
+            if(rc.getLocation().isWithinDistanceSquared(flag.getLocation(), 4)) {
+                return flag;
+            }
+        }
+
         return null;
+    }
+
+    /**
+     * 
+     * @return
+     * @throws GameActionException
+     */
+    public static boolean shouldGrabFlag() throws GameActionException {
+        FlagInfo flagTarget = getFlagTarget();
+        if(flagTarget == null) return false;
+
+        MapLocation flagLocation = flagTarget.getLocation();
+        Direction dir = rc.getLocation().directionTo(flagLocation);
+        if(!rc.canMove(dir)) return false;
+
+        MapLocation target = flagLocation.add(dir);
+        int numShooting = 0;
+        for(RobotInfo enemy : enemies) {
+            if(enemy.getLocation().distanceSquaredTo(target) <= GameConstants.ATTACK_RADIUS_SQUARED) {
+                numShooting++;
+            }
+        }
+        if(numShooting > 2) return false;
+
+        return true;
     }
 
     /**
@@ -318,13 +359,15 @@ public class Combat {
         CombatMode mode = CombatMode.OFF;
 
         if(rc.senseNearbyFlags(-1, rc.getTeam()).length > 0) mode = CombatMode.FLAG_DEF;
-        else if(Combat.shouldTrap()) mode = CombatMode.TRAP;
-        else if(Combat.shouldRunAway()) mode = CombatMode.DEF;
+        else if(shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
+        else if(shouldTrap()) mode = CombatMode.TRAP;
+        else if(shouldRunAway()) mode = CombatMode.DEF;
         
 
         Direction dir = Direction.CENTER;
 
         switch(mode) {
+            case FLAG_OFF:  dir = Combat.getFlagOffensiveDirection();       break;
             case FLAG_DEF:  dir = Combat.getFlagProtectionDirection();      break;
             case TRAP:      dir = Combat.getTrapDirection();                break;
             case DEF :      dir = Combat.getDefensiveDirection();           break;
