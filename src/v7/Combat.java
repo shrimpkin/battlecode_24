@@ -324,6 +324,25 @@ public class Combat {
     }
 
     /**
+     * checks there is a flag to defend
+     * and that enemies are near it
+     */
+    public static boolean shouldDefendFlag() throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
+        if(flags.length == 0) return false;
+
+        MapLocation flagLocation = flags[0].getLocation();
+
+        for(RobotInfo enemy : enemies) {
+            if(enemy.getLocation().isWithinDistanceSquared(flagLocation, 4)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns a MapLocation to build on that is best
      * @return
      */
@@ -334,7 +353,7 @@ public class Combat {
         for(Direction dir : Utils.directions) {
             MapLocation target = rc.getLocation().add(dir);
 
-            if(target != null && target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.STUN, target)) {
+            if(target != null && target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.EXPLOSIVE, target)) {
                 minDistance = target.distanceSquaredTo(averageEnemy);
                 bestLocationSoFar = target;
             }
@@ -345,7 +364,7 @@ public class Combat {
 
     public static void build() throws GameActionException {
         MapLocation buildTarget = buildTarget();
-        if(rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.STUN, buildTarget);
+        if(rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.EXPLOSIVE, buildTarget);
 
         buildTarget = buildTarget();
         if(rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.EXPLOSIVE, buildTarget);
@@ -358,11 +377,10 @@ public class Combat {
         Combat.reset();
         CombatMode mode = CombatMode.OFF;
 
-        if(rc.senseNearbyFlags(-1, rc.getTeam()).length > 0) mode = CombatMode.FLAG_DEF;
-        else if(shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
-        else if(shouldTrap()) mode = CombatMode.TRAP;
-        else if(shouldRunAway()) mode = CombatMode.DEF;
-        
+        if(shouldDefendFlag())      mode = CombatMode.FLAG_DEF;
+        else if(shouldGrabFlag())   mode = CombatMode.FLAG_OFF;
+        else if(shouldTrap())       mode = CombatMode.TRAP;
+        else if(shouldRunAway())    mode = CombatMode.DEF;
 
         Direction dir = Direction.CENTER;
 
@@ -388,7 +406,8 @@ public class Combat {
         updateIndicator();
         target = rc.getLocation().add(dir);
 
-        if(shouldTrap()) build();
+        if(shouldBuild()) build();
+        
     }
 
     /**
