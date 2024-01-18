@@ -20,7 +20,7 @@ public class Combat {
 
     static int OUTNUMBER = 2;
 
-    static enum CombatMode {OFF, DEF, TRAP, NONE};
+    static enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, NONE};
     static enum ActionMode {HEAL, ATT, NONE};
     static CombatMode[] modeLog;
     static MapLocation[] locations;
@@ -54,7 +54,8 @@ public class Combat {
     public static boolean shouldTrap() throws GameActionException {
         return averageTrap != null                                          //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
-                && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
+                && !(friendlies.length >= enemies.length * OUTNUMBER)      //make sure we don't already outnumber by a lot
+                && numTraps <= 2;
     }
 
     public static void reset() throws GameActionException {
@@ -203,11 +204,23 @@ public class Combat {
         return bestDirectionSoFar;
     }
 
-    //TODO: Implement a method that makes the robot defend the flags in a noncowardly way
+    /**
+     * Makes the 
+     * @return
+     * @throws GameActionException
+     */
     public static Direction getFlagProtectionDirection() throws GameActionException {
-        Direction bestDirectionSoFar = Direction.CENTER;
-        
-        return bestDirectionSoFar;
+        //first check to see if the enemies have already grabbed our flag
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
+
+        for(FlagInfo flag : flags) {
+            MapLocation flagLocation = flag.getLocation();
+            RobotInfo robot = rc.senseRobotAtLocation(flagLocation);
+            if(robot != null && robot.getTeam().equals(rc.getTeam().opponent())) {
+                return rc.getLocation().directionTo(flagLocation);
+            }
+        }
+        return getOffensiveDirection();
 
     }
 
@@ -291,10 +304,10 @@ public class Combat {
 
     public static void build() throws GameActionException {
         MapLocation buildTarget = buildTarget();
-        if(rc.canBuild(TrapType.STUN, buildTarget)) rc.build(TrapType.STUN, buildTarget);
+        if(rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.STUN, buildTarget);
 
         buildTarget = buildTarget();
-        if(rc.canBuild(TrapType.STUN, buildTarget)) rc.build(TrapType.STUN, buildTarget);
+        if(rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.EXPLOSIVE, buildTarget);
     }
 
     /**
@@ -304,16 +317,18 @@ public class Combat {
         Combat.reset();
         CombatMode mode = CombatMode.OFF;
 
-        if(Combat.shouldTrap()) mode = CombatMode.TRAP;
+        if(rc.senseNearbyFlags(-1, rc.getTeam()).length > 0) mode = CombatMode.FLAG_DEF;
+        else if(Combat.shouldTrap()) mode = CombatMode.TRAP;
         else if(Combat.shouldRunAway()) mode = CombatMode.DEF;
         
 
         Direction dir = Direction.CENTER;
 
         switch(mode) {
-            case TRAP: dir = Combat.getTrapDirection();         break;
-            case DEF : dir = Combat.getDefensiveDirection();    break;
-            case OFF : dir = Combat.getOffensiveDirection();    break;
+            case FLAG_DEF:  dir = Combat.getFlagProtectionDirection();      break;
+            case TRAP:      dir = Combat.getTrapDirection();                break;
+            case DEF :      dir = Combat.getDefensiveDirection();           break;
+            case OFF :      dir = Combat.getOffensiveDirection();           break;
             case NONE: break;
         }
        
