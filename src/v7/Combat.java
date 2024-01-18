@@ -52,7 +52,6 @@ public class Combat {
      * Should the robot attempt to make the enemies walk into the traps
      */
     public static boolean shouldTrap() throws GameActionException {
-        indicator += "(f,e): (" + friendlies.length + " " + enemies.length + ")";
         return averageTrap != null                                          //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
@@ -281,7 +280,7 @@ public class Combat {
         for(Direction dir : Utils.directions) {
             MapLocation target = rc.getLocation().add(dir);
 
-            if(target != null && target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.EXPLOSIVE, target)) {
+            if(target != null && target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.STUN, target)) {
                 minDistance = target.distanceSquaredTo(averageEnemy);
                 bestLocationSoFar = target;
             }
@@ -290,8 +289,12 @@ public class Combat {
         return bestLocationSoFar;
     }
 
-    public static void build() {
+    public static void build() throws GameActionException {
+        MapLocation buildTarget = buildTarget();
+        if(rc.canBuild(TrapType.STUN, buildTarget)) rc.build(TrapType.STUN, buildTarget);
 
+        buildTarget = buildTarget();
+        if(rc.canBuild(TrapType.STUN, buildTarget)) rc.build(TrapType.STUN, buildTarget);
     }
 
     /**
@@ -326,6 +329,8 @@ public class Combat {
 
         updateIndicator();
         target = rc.getLocation().add(dir);
+
+        if(shouldTrap()) build();
     }
 
     /**

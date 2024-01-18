@@ -42,7 +42,6 @@ public strictfp class RobotPlayer {
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
                 globals();
-                bombIfAboutToDie();
                 flagStuff();
                 move();
                 SA.updateMap();
@@ -56,15 +55,6 @@ public strictfp class RobotPlayer {
         }
     }
 
-    public static void bombIfAboutToDie() throws GameActionException {
-        if (rc.getHealth() < 100) {
-            MapLocation cur = rc.getLocation();
-            if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
-                rc.build(TrapType.EXPLOSIVE, cur);
-            }
-        }
-    }
-
     /**
      * handles initializing all static fields and assigning each robot an ID
      */
@@ -73,6 +63,7 @@ public strictfp class RobotPlayer {
         Pathfinding.init(rc);
         Combat.init(rc);
         Utils.init(rc);
+        FlagReturn.init(rc);
 
         //assigning each duck an ID that is based off of when they move 
         //in a turn
@@ -253,18 +244,12 @@ public strictfp class RobotPlayer {
         
         //attempts to return flag to closest spawn location
         //TODO: avoid enemies
+        //attempts to return flag to closest spawn location
         if(rc.hasFlag() && !hasMyFlag()) {
-            target = SA.getLocation(SA.FLAG1);
-            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-            int min = Integer.MAX_VALUE;
-            for(MapLocation spawn : spawnLocs) {
-                if(rc.getLocation().distanceSquaredTo(spawn) < min) {
-                    min = rc.getLocation().distanceSquaredTo(spawn);
-                    target = spawn;
-                }
-            }
+            target = FlagReturn.getReturnTarget();
+            indicator += FlagReturn.indicator;
             return target;
-        } 
+        }
         
         //controls defense
         if(ID <= 3) {            
@@ -382,47 +367,6 @@ public strictfp class RobotPlayer {
         if(rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
         if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
         if(rc.canBuyGlobal(GlobalUpgrade.CAPTURING)) rc.buyGlobal(GlobalUpgrade.CAPTURING);
-    }
-
-    /**
-     * Determines if the robot should build, and what it should build
-     * Currently just goes for explosive traps if there are a lot of nearby
-     */
-    public static void build() throws GameActionException {
-        MapLocation[] allySpawnLocs = rc.getAllySpawnLocations();
-        for(MapLocation allySpawnLoc : allySpawnLocs) {
-            int numTrapsNearby = 0;
-            MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(allySpawnLoc, 4);
-            for(MapInfo nearbyLoc : nearbyLocs) {
-                if(nearbyLoc.getTrapType() != TrapType.NONE) {
-                    numTrapsNearby += 1;
-                }
-            }
-            if(numTrapsNearby >= 1) {
-                continue;
-            } else {
-                if(rc.canBuild(TrapType.EXPLOSIVE, allySpawnLoc)) {
-                    rc.build(TrapType.EXPLOSIVE, allySpawnLoc);
-                    break;
-                }
-            }
-        }
-
-        // putting down bombs when there are lots of enemies nearby and fighting
-        int numEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length;
-        int numTrapsNearby = 0;
-        MapInfo[] nearbyLocs = rc.senseNearbyMapInfos(rc.getLocation(), -1);
-        for(MapInfo nearbyLoc : nearbyLocs) {
-            if(nearbyLoc.getTrapType() != TrapType.NONE) {
-                numTrapsNearby += 1;
-            }
-        }
-
-        if(numEnemies >= ENEMIES_PER_TRAP && numTrapsNearby <= 2) {
-            if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-            }
-        }       
     }
 
     /**
