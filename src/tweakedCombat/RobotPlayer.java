@@ -1,16 +1,6 @@
 package tweakedCombat;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.FlagInfo;
-import battlecode.common.GameActionException;
-import battlecode.common.GlobalUpgrade;
-import battlecode.common.MapInfo;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.TrapType;
-import battlecode.world.Trap;
+import battlecode.common.*;
 import scala.util.Random;
 
 /**
@@ -22,17 +12,28 @@ public strictfp class RobotPlayer {
 
     //number that indicates when the robot move in the turn
     static int ID = 0;
-    static int NUM_ROBOTS_TO_DEFEND = 5;
-    static int NUM_ROBOTS_TO_ESCORT = 3;
+    static int NUM_ROBOTS_TO_DEFEND = 0;
+    static int NUM_ROBOTS_TO_ESCORT = 0;
     static int ENEMIES_PER_TRAP = 3;
 
 
     //string used for debugging purposes
     static String indicator; 
     static RobotController rc;
-    static final Random rng = new Random(6147);
+    static final int baseSeed = 6147;
+    static final Random rng = new Random(baseSeed);
 
     public static void run(RobotController m_rc) throws GameActionException {
+        String[] syms = { // debug printing
+                "how?",
+                "ROTATIONALLY SYMMETRIC",
+                "HORIZONTALLY SYMMETRIC",
+                "rot or horiz sym",
+                "VERTICALLY SYMMETRIC",
+                "vert or rot sym",
+                "vert or horiz sym",
+                "no clue all three are possible"
+        };
         rc = m_rc;
 
         while(true) {
@@ -41,39 +42,37 @@ public strictfp class RobotPlayer {
             indicator = ID + ": ";
 
             if(rc.getRoundNum() == 1) init();
-            if(rc.getRoundNum() % 750 == 0) globals();
+            Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
+            Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
+            rc.writeSharedArray(SA.escort, SA.encode(SA.getLocation(SA.escort), 0));
 
             //tries to spawn in the robot if we can
             if(!rc.isSpawned()) {
                 spawn();
+                // sacrifice tiny bit of movement in order to ensure all 3 spawns have ducks spawn on them
+                if (rc.getRoundNum() == 1 && ID < 9) Clock.yield();
             } 
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
-                bombIfAboutToDie();
+                MapLocation init = rc.getLocation();
+                globals();
                 flagStuff();
-                defenderBuild(); // probably a better place to put this :/
                 move();
                 SA.updateMap();
                 heal();
+                defenderBuild(); // probably a better place to put this :/
                 fill();
+                MapLocation result = rc.getLocation();
+                if (!init.equals(result)) MapRecorder.updateSurroundings();
             }
-            
+            for (int i = 0; i < 3; i++){
+                if (rc.readSharedArray(i) != 0)
+                    rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
+            }
+
             rc.setIndicatorString(indicator);
             Clock.yield();
-        }
-    }
-
-    public static void bombIfAboutToDie() {
-        if (rc.getHealth() < 100) {
-            MapLocation cur = rc.getLocation();
-            if (rc.canBuild(TrapType.EXPLOSIVE, cur)) {
-                try {
-                    rc.build(TrapType.EXPLOSIVE, cur);
-                } catch (GameActionException e) {
-                    // just continue, dont want to explicit err
-                }
-            }
         }
     }
 
@@ -85,6 +84,8 @@ public strictfp class RobotPlayer {
         Pathfinding.init(rc);
         Combat.init(rc);
         Utils.init(rc);
+        FlagReturn.init(rc);
+        MapRecorder.init(rc);
 
         //assigning each duck an ID that is based off of when they move 
         //in a turn
@@ -93,6 +94,9 @@ public strictfp class RobotPlayer {
         if(rc.readSharedArray(SA.INDEXING) == 50) {
             rc.writeSharedArray(SA.INDEXING, 0);
         }
+        rng.setSeed(baseSeed + ID); // add some variation so bots don't have the same targeting
+        // write initial value for symmetry query (all symmetries possible)
+        rc.writeSharedArray(SA.symmetry, 0b111);
     }
 
     /**
@@ -108,9 +112,10 @@ public strictfp class RobotPlayer {
         if(rc.readSharedArray(SA.defend) != 0) {
             indicator += "DEF";
             MapLocation target = SA.getLocation(SA.defend);
+
             for(MapLocation spawn : spawnLocs) {
                 //2 makes sure it is in the square around the flag
-                if(spawn.isWithinDistanceSquared(target, 2)) {
+                if(spawn.distanceSquaredTo(target) < 2) {
                     if(rc.canSpawn(spawn)) {
                         rc.spawn(spawn);
                         return true;
@@ -118,7 +123,7 @@ public strictfp class RobotPlayer {
                 }
             }
         }
-        // TODO: maybe choose the closest to enemy flag / escort also?
+
         //randomly spawning
         for(MapLocation spawn : spawnLocs) {
             if (rc.canSpawn(spawn)) {
@@ -131,24 +136,23 @@ public strictfp class RobotPlayer {
         return false;
     }
 
-
+    
     /**
      * writes enemy flags into shared array
      * removes enemy flags from shared array if they aren't there
      * picks up enemy flags
      * creates escort for friendlies that are returning flags
-     *
      */
     public static void flagStuff() throws GameActionException {
         FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
-        MapLocation enemyFlagTarget = SA.getLocation(SA.enemyFlag);
-        //reset enemy flags if not at SA location
-        if(rc.canSenseLocation(enemyFlagTarget) && nearbyFlags.length == 0) {
-            rc.writeSharedArray(SA.enemyFlag, 0);
+        MapLocation TARGET_ENEMY_FLAGTarget = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        //reseting enemy flags if not at SA location
+        if(rc.canSenseLocation(TARGET_ENEMY_FLAGTarget) && nearbyFlags.length == 0) {
+            rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
         }
         
         //writing enemy flags into shared array
-        if(SA.getPrefix(SA.enemyFlag) == 0) {
+        if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0) {
             
             if(nearbyFlags.length > 0) {
                 FlagInfo info = nearbyFlags[0];
@@ -158,14 +162,14 @@ public strictfp class RobotPlayer {
 
                     //only adds the flag to the shared array if we don't already possess it
                     if(robot == null || robot.getTeam().equals(rc.getTeam().opponent())) {
-                        rc.writeSharedArray(SA.enemyFlag, SA.encode(info.getLocation(), 1));
+                        rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, SA.encode(info.getLocation(), 1));
                     }
                 }
 
-            } else if(rc.readSharedArray(SA.enemyFlag) == 0 || rc.getRoundNum() % 100 == 0) {
+            } else if(rc.readSharedArray(SA.TARGET_ENEMY_FLAG) == 0 || rc.getRoundNum() % 100 == 0) {
                 if(rc.senseBroadcastFlagLocations().length != 0) {
                     MapLocation loc = rc.senseBroadcastFlagLocations()[0];
-                    rc.writeSharedArray(SA.enemyFlag, SA.encode(loc, 0));
+                    rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, SA.encode(loc, 0));
                 }
             }
         }
@@ -175,7 +179,7 @@ public strictfp class RobotPlayer {
             MapLocation flagLoc = flag.getLocation();
             if(rc.canSenseLocation(flagLoc) && rc.canPickupFlag(flagLoc)) {
                 rc.pickupFlag(flagLoc);
-                rc.writeSharedArray(SA.enemyFlag, 0);
+                rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             }
         }
         
@@ -183,8 +187,8 @@ public strictfp class RobotPlayer {
         //creating escort for returning flags
         if(rc.hasFlag() && !hasMyFlag()) {
             rc.writeSharedArray(SA.escort, SA.encode(rc.getLocation(), 1));
-            if(SA.getLocation(SA.enemyFlag).distanceSquaredTo(rc.getLocation()) <= 2) {
-                rc.writeSharedArray(SA.enemyFlag, 0);
+            if(SA.getLocation(SA.TARGET_ENEMY_FLAG).distanceSquaredTo(rc.getLocation()) <= 2) {
+                rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             }
         }
 
@@ -207,24 +211,27 @@ public strictfp class RobotPlayer {
      * Determines where the robot should move on the given turn
      * Also calls a combat method if there are visible enemies
      */
-    public static MapLocation move() throws GameActionException {
+    public static void move() throws GameActionException {
+
         MapLocation target;
         //this will be where we attempt to move
-        // TODO: fixed half-assed patch for bots trying to do combat during setup
-        if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() >= 200) {
-            target = getCombatTarget();
+        if(Utils.isEnemies() && !rc.hasFlag()) {
+
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
+                Combat.attack();
+            } else {
+                Combat.runCombat();
+                indicator += "c: " + Combat.target + " " + Combat.indicator;
+                return;
             }
-            indicator += "c: " + target + "\n";
-            return target;
-        } 
-        
+        }
+
         indicator += "t: ";
         target = getTarget();
-        
+
         //used as random movement if we don't have a target
         Direction dir = Utils.randomDirection();
         boolean hasFlag = rc.hasFlag();
@@ -239,19 +246,40 @@ public strictfp class RobotPlayer {
             Pathfinding.initTurn();
             Pathfinding.move(target);
         }
-        // stay in place if it reached the target
-        if(rc.canMove(dir) && !rc.getLocation().equals(target)) rc.move(dir);
-        
-        //updating shared array that a flag was dropped off during 
+
+        if(rc.canMove(dir)) rc.move(dir);
+
+        //updating shared array that a flag was dropped off during
         //this robots movement
         if(rc.hasFlag() != hasFlag) {
-            rc.writeSharedArray(SA.enemyFlag, 0);
+            rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
         }
         indicator += target + "\n";
-        return target;
     }
 
+    /**
+     * tries to generate an unexplored target location within MAX_TRIES. Failing that, a random non-null target
+     * location is returned
+     */
+    public static MapLocation genExploreTarget(final int MAX_TRIES){
+        MapLocation res = null;
+        MapLocation cur = rc.getLocation();
+        for (int i = 0; i < MAX_TRIES; i++){
+            // generate random location w/ distance at least 5 away from the robot
+            double dist = rng.nextDouble() * 4 + 6; // generate in range [6..9] (once floored), could expand later
+            double angle = rng.nextDouble() * 2 * Math.PI; // generate a random angle
+            res = new MapLocation( // combine into location to try
+                    Utils.clamp((int)(cur.x + Math.cos(angle) * dist), 0, rc.getMapWidth()-1),
+                    Utils.clamp((int)(cur.y + Math.sin(angle) * dist), 0, rc.getMapHeight()-1)
+            );
+            // got a valid unexplored node
+            if (MapRecorder.get(res) == null) return res;
+        }
+        return res; //failed to make one, return random location instead
+    }
+    private static MapLocation explorationTarget = null;
+    private static int lastChangeTurn = 0;
     /**
      * Chooses a movement target in this priority:
      *  -has flag: goes to closest spawn
@@ -264,23 +292,16 @@ public strictfp class RobotPlayer {
         MapLocation target = null;
         
         //attempts to return flag to closest spawn location
-        //TODO: avoid enemies - idea: possibly track approximation of how much enemies are near the flag
-        // maybe have each duck within radius N of our flag query enemy count and track the highest # in SA?
+        //TODO: avoid enemies
+        //attempts to return flag to closest spawn location
         if(rc.hasFlag() && !hasMyFlag()) {
-            target = SA.getLocation(SA.FLAG1);
-            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-            int min = Integer.MAX_VALUE;
-            for(MapLocation spawn : spawnLocs) {
-                if(rc.getLocation().distanceSquaredTo(spawn) < min) {
-                    min = rc.getLocation().distanceSquaredTo(spawn);
-                    target = spawn;
-                }
-            }
+            target = FlagReturn.getReturnTarget();
+            indicator += FlagReturn.indicator;
             return target;
         }
-
+        
         //controls defense
-        if(ID <= 3) {
+        if(ID <= 3) {            
             target = getFlagDefense();
 
             //resets defense location if there are no enemies
@@ -291,19 +312,8 @@ public strictfp class RobotPlayer {
             return target;
         }
 
-        //Grabs crumbs if we have no other goals in setup -- also allocate a few turns for crumbs blocked by dams
-        if(rc.getRoundNum() < 210) {
-            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-            if(locations.length > 0) target = locations[0];
-
-            if(target == null && rc.getRoundNum() > 150) {
-                target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
-            }
-            return target;
-        }
-
-        // Sends robots to defend - adding amt from perma-defenders
-        if(ID <= NUM_ROBOTS_TO_DEFEND + 3 && SA.getPrefix(SA.defend) == 1) {
+        // Sends robots to defend 
+        if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
             target = SA.getLocation(SA.defend);
             if(rc.canSenseLocation(target) && rc.senseNearbyFlags(-1, rc.getTeam()).length == 0) {
                 rc.writeSharedArray(SA.defend, 0);
@@ -312,20 +322,40 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.readSharedArray(SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6       //is near flag carrier
+                && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                  //not too many already escorting
+                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
             target = SA.getLocation(SA.escort);
+            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
-        }
+        } 
+
+        //Grabs crumbs if we have no other goals in life
+        if(rc.getRoundNum() < 200) {
+            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
+            if(locations.length > 0) // get the crumbs
+                target = locations[0];
+            else if(rc.getRoundNum() > 150)  // go to the center
+                target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            else { // randomly explore the map
+                // if a target change is needed, set it, otherwise use the existing target
+                if (Pathfinding.reachedTarget() || Pathfinding.invalidTarget() || rc.getRoundNum()-20 > lastChangeTurn) {
+                    // change the target to something else
+                    explorationTarget = genExploreTarget(10);
+                    lastChangeTurn = rc.getRoundNum();
+                }
+                if (explorationTarget != null)
+                    rc.setIndicatorDot(explorationTarget, 255, 0, 0);
+                target = explorationTarget;
+            }
+            return target;
+        } 
         
-        //go aggressive and if not aggressive targets exists go to either middle, defense, or maybe escort
-        // TODO: theres probably a way better labor splitting scheme
-        target = SA.getLocation(SA.enemyFlag);
+        //go aggresive and if not aggresive targets exists go middle
+        target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         if(target.equals(new MapLocation(0,0))) {
-            // 2 to 1 split to defend/escort if applicable to avoid over-stacking the pathfinding
-            // otherwise just go to middle
-            if (ID % 3 < 2 && rc.readSharedArray(SA.defend) != 0) target = SA.getLocation(SA.defend);
-            else if (ID % 3 == 2 && rc.readSharedArray(SA.escort) != 0) target = SA.getLocation(SA.escort);
-            else target = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            target = SA.getLocation(SA.escort);
         }
         return target;
     }
@@ -340,62 +370,11 @@ public strictfp class RobotPlayer {
             case 2: return SA.getLocation(SA.FLAG2);
             case 3: return SA.getLocation(SA.FLAG3);
         }
+
         return null;
     }
 
-    /**
-     * Choosing movement target and attacking 
-     */
-    public static MapLocation getCombatTarget() throws GameActionException {
-        //attempting to build if enough enemies to lure into trap or defend from flag captures
-        int enemies = Utils.getNumEnemies();
-        if(enemies >= ENEMIES_PER_TRAP || (ID <= 3 && enemies > 0)) {
-            build();
-        }
-
-        Combat.reset();
-        boolean shouldRun = Combat.shouldRunAway();
-        boolean shouldTrap = Combat.shouldTrap();
-
-        Direction dir;
-
-        if(shouldTrap) {
-            indicator += "TRAP ";
-            dir = Combat.getTrapDirection();
-        } else if(shouldRun) {
-            indicator += "DEF";
-            dir = Combat.getDefensiveDirection();
-        } else {
-            indicator += "OFF";
-            dir = Combat.getOffensiveDirection();
-        }
-
-        if(dir == null) dir = Direction.CENTER;
-
-        MapLocation targetLocation = rc.getLocation().add(dir);
-        if(shouldRun || shouldTrap) {
-            Combat.attack();
-            if(rc.canMove(dir)) rc.move(dir);
-        } else {
-            if(rc.canMove(dir)) rc.move(dir);
-            Combat.attack();
-        }
-
-        indicator += Combat.indicator;
-
-        return targetLocation;
-    }
-
-
-    /**
-     * Attempts to buy global upgrades
-     * Buys Action at turn 750
-     * Buys Healing at turn 1500
-     */
-    public static void globals() throws GameActionException {
-        if(rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
-        if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
-    }
+    
 
     /**
      * very niche method that handles passive defender building behavior
@@ -444,34 +423,13 @@ public strictfp class RobotPlayer {
     }
 
     /**
-     * Determines if the robot should build, and what it should build
-     * Currently just goes for explosive traps if there are a lot of nearby
+     * Attempts to buy global upgrades
+     * Buys action then healing then capturing
      */
-    public static void build() throws GameActionException {
-        int enemyCnt = Utils.getNumEnemies();
-        int numTraps = 0;
-        MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-        for(MapInfo info : mapInfo) {
-            if(info.getTrapType() != TrapType.NONE) {
-                numTraps++;
-            }
-        }
-
-        if(numTraps * ENEMIES_PER_TRAP <= enemyCnt) {
-            if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-            }
-        } 
-
-        // if(numTraps * ENEMIES_PER_TRAP <= Utils.getNumEnemies()) {
-        //     if(rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-        //         rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-        //     }
-        // } 
-
-        // if(rc.getCrumbs() >= 1000 && rc.canBuild(TrapType.STUN, rc.getLocation())) {
-        //     rc.build(TrapType.STUN, rc.getLocation());
-        // }
+    public static void globals() throws GameActionException {
+        if(rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
+        if(rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
+        if(rc.canBuyGlobal(GlobalUpgrade.CAPTURING)) rc.buyGlobal(GlobalUpgrade.CAPTURING);
     }
 
     /**

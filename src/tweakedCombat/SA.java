@@ -16,14 +16,19 @@ public class SA {
     public static int FLAG1 = 0;
     public static int FLAG2 = 1;
     public static int FLAG3 = 2;
-    public static int enemyFlag = 3;
+    public static int TARGET_ENEMY_FLAG = 3;
+
+    public static int ENEMY_FLAG1 = 4;
+    public static int ENEMY_FLAG2 = 5;
+    public static int ENEMY_FLAG3 = 6;
 
     //for the first turn the location is also used for indexing all robots
-    public static int INDEXING = 3;
+    public static int INDEXING = 7;
 
-    public static int e_loc_start = 4;
-    public static int escort = 5;
-    public static int defend = 6;
+    public static int e_loc_start = 8;
+    public static int escort = 9;
+    public static int defend = 10;
+    public static int symmetry = 11; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
     public static int f_loc_start = 56;
 
     static RobotController rc;
@@ -44,13 +49,11 @@ public class SA {
     }
 
     /**
-     * @param value a number obtained from the shared array, by using the encode method
+     * @param index index of the shared array to access
      * @return the map location that was encoded
      */
     public static MapLocation getLocation(int index) throws GameActionException {
-        int value = rc.readSharedArray(index);
-
-        value /= 10;
+        int value = rc.readSharedArray(index) >> 4;
 
         int x = value % width;
         int y = value / width;
@@ -59,12 +62,12 @@ public class SA {
     }
 
     /**
-     * @param value a number obtained from the shared array, by using the encode method
+     * @param index index of the shared array to access
      * @return the prefix that was encoded
      */
     public static int getPrefix(int index) throws GameActionException {
         int value = rc.readSharedArray(index);
-        return value % 10;
+        return value & 0b1111;
     }
 
     /**
@@ -72,49 +75,52 @@ public class SA {
      * that can be accessed in the shared array
      * the prefix should be used for any additional information besides 
      * location that needs to be conveyed 
-     * @param location 
-     * @param prefix
+     * @param location location to encode
+     * @param prefix prefix to encode in range [0,15]
      * @return the integer to be written into the shared array
      */
     public static int encode(MapLocation location, int prefix) {
-        return prefix + 10* (location.x + location.y * width);
+        return prefix + (location.x + location.y * width << 4);
     }
-    
+
 
     /**
-     * adds flags into shared array
+     * returns a bitflag representing the possible symmetries at the moment
+     *  <p>ret & 4 == 0 -> maybe vertical symmetry</p>
+     *  <p>ret & 2 == 0 -> maybe horizontal symmetry</p>
+     *  <p>ret & 1 == 0 -> maybe rotation symmetry</p>
+     * if return val is power of two then we know for sure which it is
      */
-    public static void updateMap() throws GameActionException {
-        if(rc.readSharedArray(SA.FLAG1) == 0 
-            || rc.readSharedArray(SA.FLAG2) == 0 
-            || rc.readSharedArray(SA.FLAG3) == 0) {
-            setFlags();
-        }
+    public static int getSymmetry() throws GameActionException{
+        return rc.readSharedArray(symmetry);
     }
+
+    /**
+     * checks whether the map symmetry is known for sure (it's a power of 2)
+     */
+    public static boolean symmetryKnown() throws GameActionException{
+        return symmetryKnown(rc.readSharedArray(symmetry));
+    }
+    public static boolean symmetryKnown(int curSet){
+        return Integer.bitCount(curSet) == 1;
+    }
+
 
     /**
      * A method that will add flags to the shared array if they haven't been yet
+     * should fill up from L -> R w/o gaps
      */
-    public static void setFlags() throws GameActionException {
-        FlagInfo[] flags = rc.senseNearbyFlags(-1);
-        for(FlagInfo flag : flags) {
-            if(flag.getTeam() == rc.getTeam()) {
-                boolean in = false;
-                for(int i = 0; i <= 2; i++) {
-                    if(flag.getLocation().equals(SA.getLocation(i))) {
-                        in = true;
-                    }
-                }
-
-                if(!in) {
-                    for(int i = 0; i <= 2; i++) {
-                        if(rc.readSharedArray(i) == 0) {
-                            rc.writeSharedArray(i, SA.encode(flag.getLocation(), 0));
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+    public static void updateMap() throws GameActionException {
+        int firstEmpty;
+        if (rc.readSharedArray(SA.FLAG3) == 0) firstEmpty = 2; else return; // return if already filled
+        if (rc.readSharedArray(SA.FLAG2) == 0) firstEmpty = 1; // update if previous ones are also empty to get 1st ind
+        if (rc.readSharedArray(SA.FLAG1) == 0) firstEmpty = 0;
+        FlagInfo[] flags = rc.senseNearbyFlags(9, rc.getTeam());
+        assert flags.length == 1; // if this is on first round, the robot should be adjacent to a flag
+        FlagInfo flag = flags[0];
+        for(int i = SA.FLAG1; i < firstEmpty; i++) // check if location is already present
+            if(flag.getLocation().equals(SA.getLocation(i))) return;
+        // empty space and flag not present: write to first empty location
+        rc.writeSharedArray(firstEmpty, encode(flag.getLocation(), 0));
     }
 }

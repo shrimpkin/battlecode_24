@@ -2,17 +2,13 @@ package tweakedCombat;
 
 import battlecode.common.Direction;
 import battlecode.common.GameConstants;
+import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 
 import java.util.HashSet;
 
 public class Pathfinding {
-
-    static RobotController rc;
-    static MapLocation target = null;
-    static double avgRubbleCost = 0;
-    static boolean[] impassable = null;
 
     static final Direction[] directions = {
             Direction.NORTH,
@@ -25,47 +21,67 @@ public class Pathfinding {
             Direction.NORTHWEST,
             Direction.CENTER
     };
+    static final double eps = 1e-5;
+    static RobotController rc;
+    static MapLocation target = null;
+    static double avgRubbleCost = 0;
+    static boolean[] impassable = null;
 
     public static void init(RobotController r) {
         rc = r;
     }
 
-    static void setImpassable(boolean[] imp){
+    static void setImpassable(boolean[] imp) {
         impassable = imp;
     }
 
-    public static void initTurn(){
+    public static void initTurn() {
         impassable = new boolean[directions.length];
     }
 
-    static boolean canMove(Direction dir){
+    static boolean reachedTarget() {
+        if (target == null) return true; // vacuously true
+        return target.equals(rc.getLocation());
+    }
+
+    /**
+     * @return whether the target is known to be wholly impassible: [enemy territory in setup, wall/dam generally]
+     */
+    static boolean invalidTarget() {
+        if (target == null) return true; // vacuously true
+        MapInfo info = MapRecorder.get(target);
+        return info != null && (
+                info.isWall() || info.isDam() // wall or dam
+                || (rc.getRoundNum() < 200 && !info.getTeamTerritory().equals(rc.getTeam())) // other team land in setup
+        );
+    }
+
+    static boolean canMove(Direction dir) {
         if (!rc.canMove(dir)) return false;
         if (impassable[dir.ordinal()]) return false;
         return true;
     }
 
-    static double getEstimation (MapLocation loc){
+    static double getEstimation(MapLocation loc) {
         try {
             if (loc.distanceSquaredTo(target) == 0) return 0;
             int d = distance(target, loc);
             double r = 1.0;
             return r + (d - 1) * avgRubbleCost;
-        } catch (Throwable e){
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return 1e9;
     }
 
-    static public void move(MapLocation loc){
+    static public void move(MapLocation loc) {
         if (!rc.isMovementReady()) return;
         target = loc;
         if (!BugNav.move()) greedyPath();
         //BugNav.move();
     }
 
-    static final double eps = 1e-5;
-
-    static void greedyPath(){
+    static void greedyPath() {
         try {
             MapLocation myLoc = rc.getLocation();
             Direction bestDir = null;
@@ -88,7 +104,7 @@ public class Pathfinding {
                 int newDist = newLoc.distanceSquaredTo(target);
 
                 double estimation = firstStep + getEstimation(newLoc);
-                if (bestDir == null || estimation < bestEstimation - eps || (Math.abs(estimation - bestEstimation) <= 2*eps && newDist < bestEstimationDist)) {
+                if (bestDir == null || estimation < bestEstimation - eps || (Math.abs(estimation - bestEstimation) <= 2 * eps && newDist < bestEstimationDist)) {
                     bestEstimation = estimation;
                     bestDir = dir;
                     bestEstimationDist = newDist;
@@ -98,19 +114,23 @@ public class Pathfinding {
                 avgRubbleCost = avgR / contRubble;
             }
             if (bestDir != null) rc.move(bestDir);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    static boolean strictlyCloser(MapLocation newLoc, MapLocation oldLoc, MapLocation target){
+    static boolean strictlyCloser(MapLocation newLoc, MapLocation oldLoc, MapLocation target) {
         int dOld = distance(target, oldLoc), dNew = distance(target, newLoc);
         if (dOld < dNew) return false;
         if (dNew < dOld) return true;
         return target.distanceSquaredTo(newLoc) < target.distanceSquaredTo(oldLoc);
     }
 
-    static class BugNav{
+    static int distance(MapLocation A, MapLocation B) {
+        return Math.max(Math.abs(A.x - B.x), Math.abs(A.y - B.y));
+    }
+
+    static class BugNav {
 
         static final int INF = 1000000;
         static final int MAX_MAP_SIZE = GameConstants.MAP_MAX_HEIGHT;
@@ -122,7 +142,7 @@ public class Pathfinding {
         static HashSet<Integer> visited = new HashSet<>();
 
         static boolean move() {
-            try{
+            try {
                 //different target? ==> previous data does not help!
                 if (prevTarget == null || target.distanceSquaredTo(prevTarget) > 0) resetPathfinding();
 
@@ -143,14 +163,14 @@ public class Pathfinding {
                 //If there's an obstacle I try to go around it [until I'm free] instead of going to the target directly
                 Direction dir = myLoc.directionTo(target);
                 if (lastObstacleFound != null) dir = myLoc.directionTo(lastObstacleFound);
-                if (canMove(dir)){
+                if (canMove(dir)) {
                     resetPathfinding();
                     // if (rc.getType() != RobotType.SLANDERER) return false;
                 }
 
                 //I rotate clockwise or counterclockwise (depends on 'rotateRight'). If I try to go out of the map I change the orientation
                 //Note that we have to try at most 16 times since we can switch orientation in the middle of the loop. (It can be done more efficiently)
-                for (int i = 8; i-- > 0;) {
+                for (int i = 8; i-- > 0; ) {
                     if (canMove(dir)) {
                         rc.move(dir);
                         return true;
@@ -164,20 +184,20 @@ public class Pathfinding {
                 }
 
                 if (canMove(dir)) rc.move(dir);
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return true;
         }
 
         //clear some of the previous data
-        static void resetPathfinding(){
+        static void resetPathfinding() {
             lastObstacleFound = null;
             minDistToEnemy = INF;
             visited.clear();
         }
 
-        static int getCode(){
+        static int getCode() {
             int x = rc.getLocation().x;
             int y = rc.getLocation().y;
             Direction obstacleDir = rc.getLocation().directionTo(target);
@@ -185,11 +205,6 @@ public class Pathfinding {
             int bit = rotateRight ? 1 : 0;
             return (((((x << 6) | y) << 4) | obstacleDir.ordinal()) << 1) | bit;
         }
-    }
-
-
-    static int distance(MapLocation A, MapLocation B){
-        return Math.max(Math.abs(A.x - B.x), Math.abs(A.y - B.y));
     }
 
 }

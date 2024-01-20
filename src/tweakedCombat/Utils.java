@@ -6,8 +6,6 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import scala.util.Random;
 
-import java.util.Map;
-
 public class Utils {
     static RobotController rc; 
 
@@ -66,5 +64,12 @@ public class Utils {
                 pos.add(Direction.EAST),
                 pos.add(Direction.WEST)
         };
+    }
+
+    // ** misc **
+    public static int clamp(int value, int min, int max){
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 }
