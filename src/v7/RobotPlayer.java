@@ -33,6 +33,7 @@ public strictfp class RobotPlayer {
             if(rc.getRoundNum() == 1) init();
             Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
             Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
+            rc.writeSharedArray(SA.escort, SA.encode(SA.getLocation(SA.escort), 0));
 
             //tries to spawn in the robot if we can
             if(!rc.isSpawned()) {
@@ -190,16 +191,17 @@ public strictfp class RobotPlayer {
         MapLocation target;
         //this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag()) {
-            Combat.runCombat();
             
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
+                Combat.attack();
+            } else {
+                Combat.runCombat();
+                indicator += "c: " + Combat.target + " " + Combat.indicator;
+                return;
             }
-
-            indicator += "c: " + Combat.target + " " + Combat.indicator;
-            return;
         } 
         
         indicator += "t: ";
@@ -273,26 +275,30 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.readSharedArray(SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6 && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT) {
             target = SA.getLocation(SA.escort);
+            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         } 
+
+        MapLocation[] locations = rc.senseNearbyCrumbs(-1);
 
         //Grabs crumbs if we have no other goals in life
-        if(rc.getRoundNum() < 200) {
-            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-            if(locations.length > 0) target = locations[0];
-
-            if(target == null && rc.getRoundNum() > 150) {
-                target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
-            }
-            return target;
+        if(locations.length > 0) {
+             target = locations[0];
+             return target;
         } 
-        
-        //go aggresive and if not aggresive targets exists go middle
+
+        if(rc.getRoundNum() > 150 && rc.getRoundNum() < 200) {
+            target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            return target;
+        }
+    
+        //go aggresive and if not aggresive targets help bring back final flag
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         if(target.equals(new MapLocation(0,0))) {
-            target = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            target = SA.getLocation(SA.escort);
         }
         return target;
     }
