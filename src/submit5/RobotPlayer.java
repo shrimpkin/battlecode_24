@@ -73,7 +73,7 @@ public strictfp class RobotPlayer {
             if (ID ==1) {
                 // pick a corner
                 MapLocation curPos = rc.getLocation();
-                // TODO: We should use the distance to the wall
+                // TODO: We should use the distance to the wall, not pure middle
                 MapLocation mapCenter = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
 
                 Direction toCenter = curPos.directionTo(mapCenter);
