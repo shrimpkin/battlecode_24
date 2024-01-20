@@ -1,15 +1,6 @@
 package tweakedCombat;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.FlagInfo;
-import battlecode.common.GameActionException;
-import battlecode.common.GlobalUpgrade;
-import battlecode.common.MapInfo;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.TrapType;
+import battlecode.common.*;
 import scala.util.Random;
 
 /**
@@ -33,7 +24,7 @@ public strictfp class RobotPlayer {
     static final Random rng = new Random(baseSeed);
 
     public static void run(RobotController m_rc) throws GameActionException {
-        String[] syms = {
+        String[] syms = { // debug printing
                 "how?",
                 "ROTATIONALLY SYMMETRIC",
                 "HORIZONTALLY SYMMETRIC",
@@ -44,15 +35,16 @@ public strictfp class RobotPlayer {
                 "no clue all three are possible"
         };
         rc = m_rc;
+
         while(true) {
             //used for debugging, only value that should be passed through rc.setIndicator()
             //can be seen by hovering over robot
             indicator = ID + ": ";
 
             if(rc.getRoundNum() == 1) init();
-            if (rc.getRoundNum() == 1300) rc.resign();
             Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
             Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
+            rc.writeSharedArray(SA.escort, SA.encode(SA.getLocation(SA.escort), 0));
 
             //tries to spawn in the robot if we can
             if(!rc.isSpawned()) {
@@ -78,12 +70,7 @@ public strictfp class RobotPlayer {
                 if (rc.readSharedArray(i) != 0)
                     rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
             }
-            if (ID <= 3 && rc.isSpawned()) {
-                rc.setIndicatorDot(rc.getLocation(), 0, 0, 0);
-            }
-            if (ID == 1 && rc.getRoundNum() == 199){
-                System.out.println(syms[SA.getSymmetry()]);
-            }
+
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
@@ -227,16 +214,19 @@ public strictfp class RobotPlayer {
     public static void move() throws GameActionException {
 
         MapLocation target;
-        //this will be where we attempt to move,
-        if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() >= 150) {
-            Combat.runCombat();
+        //this will be where we attempt to move
+        if(Utils.isEnemies() && !rc.hasFlag()) {
+
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
+                Combat.attack();
+            } else {
+                Combat.runCombat();
+                indicator += "c: " + Combat.target + " " + Combat.indicator;
+                return;
             }
-            indicator += "c: " + Combat.target + " " + Combat.indicator;
-            return;
         }
 
         indicator += "t: ";
@@ -256,7 +246,8 @@ public strictfp class RobotPlayer {
             Pathfinding.initTurn();
             Pathfinding.move(target);
         }
-        else if(rc.canMove(dir)) rc.move(dir);
+
+        if(rc.canMove(dir)) rc.move(dir);
 
         //updating shared array that a flag was dropped off during
         //this robots movement
@@ -312,14 +303,14 @@ public strictfp class RobotPlayer {
         //controls defense
         if(ID <= 3) {            
             target = getFlagDefense();
-            //resets defense location if there are no enemies 
+
+            //resets defense location if there are no enemies
             if(SA.getLocation(SA.defend).equals(target) && !Utils.isEnemies() && rc.canSenseLocation(target)) {
                 rc.writeSharedArray(SA.defend, 0);
             }
+
             return target;
         }
-
-        // exploration in start of setup phase
 
         // Sends robots to defend 
         if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
@@ -331,8 +322,10 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.readSharedArray(SA.escort) != 0 && ID >= 51 - NUM_ROBOTS_TO_ESCORT) {
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6 && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT) {
             target = SA.getLocation(SA.escort);
+            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         } 
 
@@ -360,7 +353,7 @@ public strictfp class RobotPlayer {
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         if(target.equals(new MapLocation(0,0))) {
-            target = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            target = SA.getLocation(SA.escort);
         }
         return target;
     }
