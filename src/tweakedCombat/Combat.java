@@ -379,9 +379,6 @@ public class Combat {
     public static void build() throws GameActionException {
         MapLocation buildTarget = buildTarget();
         if (rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.EXPLOSIVE, buildTarget);
-
-        buildTarget = buildTarget();
-        if (rc.canBuild(TrapType.EXPLOSIVE, buildTarget)) rc.build(TrapType.EXPLOSIVE, buildTarget);
     }
 
     /**
