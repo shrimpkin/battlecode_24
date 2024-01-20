@@ -1,6 +1,7 @@
 package v9;
 
 import battlecode.common.*;
+import battlecode.world.Trap;
 import scala.util.Random;
 
 /**
@@ -13,7 +14,7 @@ public strictfp class RobotPlayer {
     //number that indicates when the robot move in the turn
     static int ID = 0;
     static int NUM_ROBOTS_TO_DEFEND = 0;
-    static int NUM_ROBOTS_TO_ESCORT = 0;
+    static int MAX_NUM_ROBOTS_TO_ESCORT = 3;
     static int ENEMIES_PER_TRAP = 3;
 
 
@@ -299,7 +300,27 @@ public strictfp class RobotPlayer {
             indicator += FlagReturn.indicator;
             return target;
         }
-        
+
+        // Escorts a robot with a flag
+        // Prioritized above defender bots, since when a flag comes back we can stop defending and escort
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 9           //is near flag carrier
+                && SA.getPrefix(SA.escort) < MAX_NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
+                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
+
+            RobotInfo[] numEnemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
+            // if we're being chased drop stuns
+            if (numEnemiesNearby.length > 0) {
+                if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                    rc.build(TrapType.STUN, rc.getLocation());
+                }
+            }
+
+            target = SA.getLocation(SA.escort);
+            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            indicator += "Escorting " + SA.getPrefix(SA.escort);
+            return target;
+        }
+
         //controls defense
         if(ID <= 3) {            
             target = getFlagDefense();
@@ -312,22 +333,13 @@ public strictfp class RobotPlayer {
             return target;
         }
 
-        // Sends robots to defend 
+        // Sends robots to defend
+        // TODO: Maybe handle this more like escort logic
         if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
             target = SA.getLocation(SA.defend);
             if(rc.canSenseLocation(target) && rc.senseNearbyFlags(-1, rc.getTeam()).length == 0) {
                 rc.writeSharedArray(SA.defend, 0);
             }
-            return target;
-        }
-
-        //Escorts a robot with a flag 
-        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
-                && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
-                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
-            target = SA.getLocation(SA.escort);
-            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
-            indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         }
 
