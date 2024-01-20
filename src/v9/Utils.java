@@ -1,9 +1,6 @@
 package v9;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 import scala.util.Random;
 
 public class Utils {
@@ -71,5 +68,21 @@ public class Utils {
         if (value < min) return min;
         if (value > max) return max;
         return value;
+    }
+
+    /*
+    Goal with this function is to decide if a bomb is likely at this position,
+    Bombs do less damage if dug up, and this manages the heuristics of digging.
+
+    From spec:
+    Can be built on land or in water. When an opponent robot enters the cell containing this trap, it explodes dealing 750 damage to all opponent robots within a radius of 4‾√
+ cells. When an opponent robot digs, fills, or builds on the trap, it explodes dealing 200 damage to all opponent robots within a radius of 2‾√
+ cells. The build will fail when this happens, while dig and fill will succeed.
+
+   No change on how stuns work though, and we're in stun meta.
+     */
+    public static boolean isBombLikely(MapLocation pos) throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(2, rc.getTeam().opponent());
+        return flags.length > 0;
     }
 }

@@ -233,22 +233,66 @@ public strictfp class RobotPlayer {
         indicator += "t: ";
         target = getTarget();
 
-        //used as random movement if we don't have a target
-        Direction dir = Utils.randomDirection();
         boolean hasFlag = rc.hasFlag();
-
+        boolean hasBotMoved = false;
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
 
-            if(rc.canFill(rc.getLocation().add(towards))) {
-                rc.fill(rc.getLocation().add(towards));
+            MapLocation newLoc = rc.getLocation().add(towards);
+
+            if(rc.canFill(newLoc)) {
+                rc.fill(newLoc);
             }
 
+            //if (Utils.isBombLikely(newLoc) && rc.canDig(newLoc)) {
+            //    rc.dig(newLoc);
+            //}
+
             Pathfinding.initTurn();
-            Pathfinding.move(target);
+
+            // TODO: Experiment with this more, this does seem to win games faster
+            // With just Pathfinding.move(target) here (and the random direction without case)
+            // It was winning against v8 in 578 moves on AceOfSpades now 498
+            // It seems really odd, will test against in scrims using v8 as a base
+            /*
+                Comapred to before this
+                Aceofspades- faster win
+                Small- won tie instead of lose tie
+                Large-Was lose, now lose on tie
+                Medium- win tie
+                Huge-v8 won quicker
+                Alien- was lose now lose tie
+                Ambush- win 959 -> win 453
+                Bc24-same
+                Bigducksbigpond-was lose  now lose tie
+                Canals-won slower
+                Ch3353-lose slower
+                Duck- was win tie now lose tie
+                Hockey-same
+                Rivers- lose slower
+                Maze runner- win tie
+                Snake-same
+                Yinyang-now win tie
+                Steamboat- win 1636 -> win 1112
+                Soccer- win 1152 -> lose 1456
+             */
+            int estimatePathFindBytecode = 10000;
+            int attemps = 0;
+            while (!hasBotMoved && Clock.getBytecodesLeft() >= estimatePathFindBytecode + 5000) {
+                hasBotMoved = Pathfinding.move(target);
+                attemps++;
+                if (attemps >= 3) {
+                    break;
+                }
+            }
+
         }
 
-        if(rc.canMove(dir)) rc.move(dir);
+        if (!hasBotMoved) {
+            // Pick a random direction if no target
+            Direction dir = Utils.randomDirection();
+            if (rc.canMove(dir)) rc.move(dir);
+        }
 
         //updating shared array that a flag was dropped off during
         //this robots movement
