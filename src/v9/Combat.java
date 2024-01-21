@@ -28,9 +28,13 @@ public class Combat {
 
     static int OUTNUMBER = 2;
 
-    enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE};
+    enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE}
 
-    enum ActionMode {HEAL, ATT, NONE};
+    ;
+
+    enum ActionMode {HEAL, ATT, NONE}
+
+    ;
     static CombatMode[] modeLog;
     static MapLocation[] locations;
     static ActionMode[] actionLog;
@@ -124,6 +128,7 @@ public class Combat {
             averageTrap_y /= numTraps;
             averageTrap = new MapLocation((int) averageTrap_x, (int) averageTrap_y);
         }
+
 
         double averageEnemy_x = 0;
         double averageEnemy_y = 0;
@@ -306,6 +311,7 @@ public class Combat {
                 minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
                 target = robot.getLocation();
             }
+
         }
 
         if (target != null && rc.canAttack(target)) {
@@ -319,7 +325,7 @@ public class Combat {
      */
     public static boolean shouldBuild() throws GameActionException {
         boolean output = enemies.length >= 3
-                && ((friendlies.length < enemies.length && rc.getRoundNum() >= 200) || (rc.getRoundNum() > 190 && rc.getRoundNum() < 200))
+                && ((friendlies.length < enemies.length * OUTNUMBER && rc.getRoundNum() >= 200) || (rc.getRoundNum() > 190 && rc.getRoundNum() < 200))
                 && numTraps <= 2
                 && averageEnemy != null;
 
@@ -351,12 +357,12 @@ public class Combat {
      *
      * @return
      */
-    public static MapLocation buildTarget(TrapType trap) throws GameActionException {
+    public static MapLocation buildTarget() throws GameActionException {
         MapLocation bestLocationSoFar = rc.getLocation();
         int minDistance = Integer.MAX_VALUE;
         for (Direction dir : Utils.directions) {
             MapLocation target = rc.getLocation().add(dir);
-            if (target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(trap, target)) {
+            if (target.distanceSquaredTo(averageEnemy) < minDistance && rc.canBuild(TrapType.EXPLOSIVE, target)) {
                 minDistance = target.distanceSquaredTo(averageEnemy);
                 bestLocationSoFar = target;
             }
@@ -367,28 +373,13 @@ public class Combat {
 
     public static void build() throws GameActionException {
         TrapType best = TrapType.NONE;
-
-        // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= 250) {
-            // we want to multiply by damage dealt and divide by cost of trap
-            // for stun, multiply by 150, divide by 100 = 1.5
-            // for bomb, multiply by 750, divide by 250 = 3
-            // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-            double stunEV = numFriendlies * 1.5 * 3;
-            int bombEV = numEnemies * 3;
-
-            if(stunEV >= bombEV) {
-                // System.out.println("stun");
-                best = TrapType.STUN;
-            } else {
-                // System.out.println("bomb");
-                best = TrapType.EXPLOSIVE;
-            }
-        } else {            
+        if(numFriendlies >= 8) { //tune magic number
             best = TrapType.STUN;
+        } else {
+            best = TrapType.EXPLOSIVE;
         }
 
-        MapLocation buildTarget = buildTarget(best);
+        MapLocation buildTarget = buildTarget();
         if (rc.canBuild(best, buildTarget)) rc.build(best, buildTarget);
     }
 
