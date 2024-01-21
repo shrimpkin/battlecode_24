@@ -355,7 +355,7 @@ public strictfp class RobotPlayer {
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         if(target.equals(new MapLocation(0,0))) {
-            target = SA.getLocation(SA.escort);
+            target = new MapLocation(rc.getMapWidth()/ 2, rc.getMapHeight() / 2);
         }
         return target;
     }
