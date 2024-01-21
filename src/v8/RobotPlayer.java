@@ -329,14 +329,15 @@ public strictfp class RobotPlayer {
             rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
-        } 
+        }
 
-        //Grabs crumbs if we have no other goals in life
+        // Grabs crumbs if nearby
+        // Done at all rounds to cover the case where crumbs are blocked until walls fall
+        MapLocation[] crumbLocations = rc.senseNearbyCrumbs(-1);
+        if(crumbLocations.length > 0) return crumbLocations[0];
+
         if(rc.getRoundNum() < 200) {
-            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-            if(locations.length > 0) // get the crumbs
-                target = locations[0];
-            else if(rc.getRoundNum() > 150)  // go to the center
+            if(rc.getRoundNum() > 150)  // go to the center
                 target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
             else { // randomly explore the map
                 // if a target change is needed, set it, otherwise use the existing target
