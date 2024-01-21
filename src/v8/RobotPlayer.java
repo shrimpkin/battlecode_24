@@ -3,6 +3,8 @@ package v8;
 import battlecode.common.*;
 import scala.util.Random;
 
+import java.util.ArrayList;
+
 /**
  * RobotPlayer is the class that describes your main robot strategy.
  * The run() method inside this class is like your main function: this is what we'll call once your robot
@@ -245,9 +247,23 @@ public strictfp class RobotPlayer {
 
             Pathfinding.initTurn();
             Pathfinding.move(target);
-        }
 
-        if(rc.canMove(dir)) rc.move(dir);
+            // if we can still move (pathfinding failed), try to move in direction of our target
+            if (rc.getMovementCooldownTurns() == 0) {
+                Direction towardsTarget = rc.getLocation().directionTo(target);
+                if (rc.canMove(towardsTarget)) {
+                    rc.move(towardsTarget);
+                }
+
+                // ok then just move random
+                while (rc.getMovementCooldownTurns() == 0) {
+                    Direction rand = Utils.randomDirection();
+                    if (rc.canMove(rand)) rc.move(rand);
+                }
+            }
+        } else {
+            if (rc.canMove(dir)) rc.move(dir);
+        }
 
         //updating shared array that a flag was dropped off during
         //this robots movement
