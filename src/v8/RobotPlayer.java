@@ -374,14 +374,13 @@ public strictfp class RobotPlayer {
         return null;
     }
 
-    
-
     /**
      * very niche method that handles passive defender building behavior
      * namely : tries to place stun on corners whenever possible
      */
     public static void defenderBuild() throws GameActionException {
         if (ID >= 4) return; // not a defender
+        if(rc.getRoundNum() < 200) return; //want to only place defensive traps if we can win center fight
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 250) return; // can't build: on cool-down / no money
         // active defense - put bombs on direction closest to the nearest enemy (not in setup)
