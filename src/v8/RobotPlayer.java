@@ -256,9 +256,13 @@ public strictfp class RobotPlayer {
                 }
 
                 // ok then just move random
+                int tries = 0;
                 while (rc.getMovementCooldownTurns() == 0) {
                     Direction rand = Utils.randomDirection();
                     if (rc.canMove(rand)) rc.move(rand);
+                    tries++;
+
+                    if (tries > 5) break;
                 }
             }
         } else {
