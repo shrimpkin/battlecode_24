@@ -53,7 +53,7 @@ public strictfp class RobotPlayer {
                 spawn();
                 // sacrifice tiny bit of movement in order to ensure all 3 spawns have ducks spawn on them
                 if (rc.getRoundNum() == 1 && ID < 9) Clock.yield();
-            } 
+            }
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
@@ -133,6 +133,10 @@ public strictfp class RobotPlayer {
                 bestSpawn = spawn;
                 minDist = target.distanceSquaredTo(bestSpawn);
             }
+        }
+
+        if (bestSpawn == null) {
+
         }
 
         if(bestSpawn != null) {
@@ -472,6 +476,22 @@ public strictfp class RobotPlayer {
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation target = null;
         int minHealth = 1001;
+
+        // in an attempt to make not everyone end up specialized as healers
+        // lets assign 15 healers ID [20,35] with a higher change to heal
+        // todo: investigate this more
+        boolean shouldHeal = false;
+        if (ID >= 20 && ID <= 35) {
+            shouldHeal = true;
+        } else {
+            // lets assign a chance for this to heal
+            if (rng.nextDouble() < 0.4) {
+                shouldHeal = true;
+            }
+        }
+
+        if (!shouldHeal) return;
+
         for(RobotInfo robot : friendlyRobots) {
             if(rc.canHeal(robot.getLocation())) {
                 if (robot.hasFlag()) {
