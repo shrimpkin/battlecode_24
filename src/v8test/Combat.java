@@ -35,7 +35,7 @@ public class Combat {
     static int NEAR_FRIEND_BONUS = 20;
     static int NEAR_ENEMY_BONUS = -80;
 
-    enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE};
+    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
     enum ActionMode {HEAL, ATT, NONE};
 
@@ -60,32 +60,15 @@ public class Combat {
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  * 2 > numFriendliesHealingUs 
+        return numEnemiesAttackingUs  > 0 
             || (numFriendlies < numEnemies) 
             || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
-    }
-
-    /**
-     * Should the robot attempt to make the enemies walk into the traps
-     */
-    public static boolean shouldTrap() throws GameActionException {
-        return averageNearTrap != null                                      //make sure there is trap
-                && enemies.length >= 3                                      //make sure there is enough enemies 
-                && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
     }
 
     public static void reset() throws GameActionException {
         locations[rc.getRoundNum()] = rc.getLocation();
         indicator = "";
-        resetShouldRunAway();
-        resetShouldTrap();
-    }
 
-    /**
-     * resets all constants used in the decision of whether to run away
-     * <p> [bytecode usage: 252 to 328] </p>
-     */
-    public static void resetShouldRunAway() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
 
@@ -94,29 +77,7 @@ public class Combat {
 
         numEnemiesAttackingUs = rc.senseNearbyRobots(GameConstants.ATTACK_RADIUS_SQUARED,rc.getTeam().opponent()).length;
         numFriendliesHealingUs = rc.senseNearbyRobots(GameConstants.ATTACK_RADIUS_SQUARED,rc.getTeam()).length;
-    }
-    
-    /**
-     * @return true if the robot has been in combat for the last three rounds
-     *          and has not done anything during those three rounds
-     */
-    public static boolean isUseless() throws GameActionException {
-        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
-            int index = rc.getRoundNum() - i;
 
-            if(index < 0) return false;
-            if(locations[index] == null) return false;
-            if(!locations[index].equals(rc.getLocation())) return false;
-            if(!actionLog[index].equals(ActionMode.NONE)) return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Updates average trap and enemy locations
-     */
-    public static void resetShouldTrap() throws GameActionException {
         MapInfo[] mapInfo = rc.senseNearbyMapInfos();
 
         double averageTrap_x = 0;
@@ -172,12 +133,24 @@ public class Combat {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
+    
     /**
-     * Gets the direction that result in the robot being behind traps
+     * @return true if the robot has been in combat for the last three rounds
+     *          and has not done anything during those three rounds
      */
-    public static Direction getTrapDirection() throws GameActionException {
-        return averageEnemy.directionTo(averageTrap);
+    public static boolean isUseless() throws GameActionException {
+        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
+            int index = rc.getRoundNum() - i;
+
+            if(index < 0) return false;
+            if(locations[index] == null) return false;
+            if(!locations[index].equals(rc.getLocation())) return false;
+            if(!actionLog[index].equals(ActionMode.NONE)) return false;
+        }
+
+        return true;
     }
+
 
     /**
      * Gets the direction that has the least potential attacking enemies
@@ -433,28 +406,16 @@ public class Combat {
         Direction dir = Direction.CENTER;
 
         switch (mode) {
-            case FLAG_OFF:
-                dir = Combat.getFlagOffensiveDirection();
-                break;
-            case FLAG_DEF:
-                dir = Combat.getFlagProtectionDirection();
-                break;
-            case TRAP:
-                dir = Combat.getTrapDirection();
-                break;
-            case DEF:
-                dir = Combat.getDefensiveDirection();
-                break;
-            case OFF:
-                dir = Combat.getOffensiveDirection();
-                break;
-            case NONE:
-                break;
+            case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
+            case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
+            case DEF: dir = Combat.getDefensiveDirection(); break;
+            case OFF: dir = Combat.getOffensiveDirection(); break;
+            case NONE: break;
         }
 
         modeLog[rc.getRoundNum()] = mode;
 
-        if (mode.equals(CombatMode.TRAP) || mode.equals(CombatMode.DEF)) {
+        if (mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
