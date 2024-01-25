@@ -349,14 +349,16 @@ public strictfp class RobotPlayer {
             rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
-        } 
+        }
+
+        // Target crumbs if nearby
+        // This covers the case crumbs are revealed after wall fall
+        MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
+        if(crumLocs.length > 0) return crumLocs[0];
 
         //Grabs crumbs if we have no other goals in life
         if(rc.getRoundNum() < 200) {
-            MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-            if(locations.length > 0) // get the crumbs
-                target = locations[0];
-            else if(rc.getRoundNum() > 150)  // go to the center
+            if(rc.getRoundNum() > 150)  // go to the center
                 target =  new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
             else { // randomly explore the map
                 // if a target change is needed, set it, otherwise use the existing target
@@ -375,7 +377,7 @@ public strictfp class RobotPlayer {
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         if(target.equals(new MapLocation(0,0))) {
-            target = SA.getLocation(SA.escort);
+            target = new MapLocation(rc.getMapWidth()/ 2, rc.getMapHeight() / 2);
         }
         return target;
     }
