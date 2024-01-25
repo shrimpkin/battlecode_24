@@ -68,6 +68,7 @@ public class Combat {
     public static boolean shouldTrap() throws GameActionException {
         //hard coding a little retreat at the beginning to make them walk into our traps 
         if(rc.getRoundNum() >= 200 && rc.getRoundNum() <= 203 && averageTrap != null) return true;
+
         return averageNearTrap != null                                      //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
