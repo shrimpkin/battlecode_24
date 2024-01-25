@@ -91,9 +91,6 @@ public strictfp class RobotPlayer {
         //in a turn
         rc.writeSharedArray(SA.INDEXING, rc.readSharedArray(SA.INDEXING) + 1);
         ID = rc.readSharedArray(SA.INDEXING);
-        if(rc.readSharedArray(SA.INDEXING) == 50) {
-            rc.writeSharedArray(SA.INDEXING, 0);
-        }
         rng.setSeed(baseSeed + ID); // add some variation so bots don't have the same targeting
         // write initial value for symmetry query (all symmetries possible)
         rc.writeSharedArray(SA.symmetry, 0b111);
@@ -124,15 +121,23 @@ public strictfp class RobotPlayer {
             }
         }
 
+        MapLocation target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        int minDist = Integer.MAX_VALUE;
+        MapLocation bestSpawn = null;
+
         //randomly spawning
         for(MapLocation spawn : spawnLocs) {
-            if (rc.canSpawn(spawn)) {
-                indicator += "RND ";
-                rc.spawn(spawn);
-                return true;
+            if (rc.canSpawn(spawn) && target.distanceSquaredTo(spawn) < minDist) {
+                bestSpawn = spawn;
+                minDist = target.distanceSquaredTo(bestSpawn);
             }
         }
 
+        if(bestSpawn != null) {
+            rc.spawn(bestSpawn);
+            return true;
+        }
+        
         return false;
     }
 
@@ -152,7 +157,7 @@ public strictfp class RobotPlayer {
         }
         
         //writing enemy flags into shared array
-        if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0) {
+        if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0 || SA.getLocation(SA.TARGET_ENEMY_FLAG).equals(new MapLocation(0,0))) {
             
             if(nearbyFlags.length > 0) {
                 FlagInfo info = nearbyFlags[0];
@@ -294,7 +299,7 @@ public strictfp class RobotPlayer {
         //attempts to return flag to closest spawn location
         //TODO: avoid enemies
         //attempts to return flag to closest spawn location
-        if(rc.hasFlag() && !hasMyFlag()) {
+        if(rc.hasFlag()) {
             target = FlagReturn.getReturnTarget();
             indicator += FlagReturn.indicator;
             return target;
