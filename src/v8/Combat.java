@@ -414,13 +414,13 @@ public class Combat {
         TrapType best = TrapType.NONE;
 
         // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= 250) {
+        if(rc.getCrumbs() >= 200) { // cost of EXPLOSIVE trap
             // we want to multiply by damage dealt and divide by cost of trap
             // for stun, multiply by 150, divide by 100 = 1.5
-            // for bomb, multiply by 750, divide by 250 = 3
+            // for bomb, multiply by 750, divide by 200 = 3.75
             // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-            double stunEV = numFriendlies * 1.5 * 3;
-            int bombEV = numEnemies * 3;
+            double stunEV = numFriendlies * 1.5 * 2;
+            double bombEV = numEnemies * 3.75;
 
             if(stunEV >= bombEV) {
                 // System.out.println("stun");
@@ -434,7 +434,9 @@ public class Combat {
         }
 
         MapLocation buildTarget = buildTarget(best);
-        if (rc.canBuild(best, buildTarget)) rc.build(best, buildTarget);
+        if (rc.canBuild(best, buildTarget)) {
+            // System.out.println("built");
+            rc.build(best, buildTarget);}
     }
 
     /**
