@@ -3,6 +3,8 @@ package v8;
 import battlecode.common.*;
 import scala.util.Random;
 
+import java.util.ArrayList;
+
 /**
  * RobotPlayer is the class that describes your main robot strategy.
  * The run() method inside this class is like your main function: this is what we'll call once your robot
@@ -237,10 +239,7 @@ public strictfp class RobotPlayer {
         indicator += "t: ";
         target = getTarget();
 
-        //used as random movement if we don't have a target
-        Direction dir = Utils.randomDirection();
         boolean hasFlag = rc.hasFlag();
-
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
 
@@ -248,14 +247,30 @@ public strictfp class RobotPlayer {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            Pathfinding.initTurn();
-            Pathfinding.move(target);
+            int maxTries = 0;
+            do {
+                Pathfinding.initTurn();
+                Pathfinding.move(target);
+                maxTries++;
+            }  while (maxTries < 10 && Clock.getBytecodesLeft() + 5000 > 10000);
+
+            // if we can still move (pathfinding failed), try to move in direction of our target
+            if (rc.getMovementCooldownTurns() == 0) {
+                Direction towardsTarget = rc.getLocation().directionTo(target);
+                if (rc.canMove(towardsTarget)) {
+                    rc.move(towardsTarget);
+                }
+
+                // Else random move
+                Utils.randomMove(5);
+            }
+        } else {
+            // Random move if no target found
+            Utils.randomMove(5);
         }
 
-        if(rc.canMove(dir)) rc.move(dir);
-
-        //updating shared array that a flag was dropped off during
-        //this robots movement
+        // updating shared array that a flag was dropped off during
+        // this robots movement
         if(rc.hasFlag() != hasFlag) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);

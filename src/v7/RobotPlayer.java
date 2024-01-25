@@ -245,50 +245,26 @@ public strictfp class RobotPlayer {
                 rc.fill(newLoc);
            }
 
-            Pathfinding.initTurn();
+            int maxTries = 0;
+            do {
+                Pathfinding.initTurn();
+                Pathfinding.move(target);
+                maxTries++;
+            } while (maxTries < 10 && Clock.getBytecodesLeft() + 5000 > 10000);
 
-            // TODO: Experiment with this more, this does seem to win games faster
-            // With just Pathfinding.move(target) here (and the random direction without case)
-            // It was winning against v8 in 578 moves on AceOfSpades now 498
-            // It seems really odd, will test against in scrims using v8 as a base
-            /*
-                Comapred to before this
-                Aceofspades- faster win
-                Small- won tie instead of lose tie
-                Large-Was lose, now lose on tie
-                Medium- win tie
-                Huge-v8 won quicker
-                Alien- was lose now lose tie
-                Ambush- win 959 -> win 453
-                Bc24-same
-                Bigducksbigpond-was lose  now lose tie
-                Canals-won slower
-                Ch3353-lose slower
-                Duck- was win tie now lose tie
-                Hockey-same
-                Rivers- lose slower
-                Maze runner- win tie
-                Snake-same
-                Yinyang-now win tie
-                Steamboat- win 1636 -> win 1112
-                Soccer- win 1152 -> lose 1456
-             */
-            int estimatePathFindBytecode = 10000;
-            int attemps = 0;
-            while (!hasBotMoved && Clock.getBytecodesLeft() >= estimatePathFindBytecode + 5000) {
-                hasBotMoved = Pathfinding.move(target);
-                attemps++;
-                if (attemps >= 3) {
-                    break;
+            // if we can still move (pathfinding failed), try to move in direction of our target
+            if (rc.getMovementCooldownTurns() == 0) {
+                Direction towardsTarget = rc.getLocation().directionTo(target);
+                if (rc.canMove(towardsTarget)) {
+                    rc.move(towardsTarget);
                 }
+
+                // Else random move
+                Utils.randomMove(5);
             }
-
-        }
-
-        if (!hasBotMoved) {
-            // Pick a random direction if no target
-            Direction dir = Utils.randomDirection();
-            if (rc.canMove(dir)) rc.move(dir);
+        } else {
+            // Random move if no target found
+            Utils.randomMove(5);
         }
 
         //updating shared array that a flag was dropped off during

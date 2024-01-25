@@ -116,7 +116,7 @@ public class SA {
         if (rc.readSharedArray(SA.FLAG2) == 0) firstEmpty = 1; // update if previous ones are also empty to get 1st ind
         if (rc.readSharedArray(SA.FLAG1) == 0) firstEmpty = 0;
         FlagInfo[] flags = rc.senseNearbyFlags(9, rc.getTeam());
-        assert flags.length == 1; // if this is on first round, the robot should be adjacent to a flag
+       assert flags.length != 0; // if this is on first round, the robot should be adjacent to a flag
         FlagInfo flag = flags[0];
         for(int i = SA.FLAG1; i < firstEmpty; i++) // check if location is already present
             if(flag.getLocation().equals(SA.getLocation(i))) return;

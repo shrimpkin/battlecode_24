@@ -72,4 +72,20 @@ public class Utils {
         if (value > max) return max;
         return value;
     }
+
+    public static boolean randomMove(int maxTries) throws GameActionException {
+        int tries = 0;
+        while (rc.getMovementCooldownTurns() == 0) {
+            Direction rand = randomDirection();
+            if (rc.canMove(rand)) {
+                rc.move(rand);
+                return true;
+            }
+            tries++;
+
+            if (tries >= maxTries) break;
+        }
+
+        return false;
+    }
 }
