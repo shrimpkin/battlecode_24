@@ -393,26 +393,30 @@ public class Combat {
 
     public static void build() throws GameActionException {
         TrapType best = TrapType.NONE;
+        if(rc.getRoundNum() <= 300) {
+            best = TrapType.EXPLOSIVE;
+        } else {
+            // picking between stun or bomb if possible
+            if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) { // cost of EXPLOSIVE trap
+                // we want to multiply by damage dealt and divide by cost of trap
+                // for stun, multiply by 150, divide by 100 = 1.5
+                // for bomb, multiply by 750, divide by 200 = 3.75
+                // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
+                double stunEV = numFriendlies * 1.5 * 2;
+                double bombEV = numEnemies * 3.75;
 
-        // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) {
-            // we want to multiply by damage dealt and divide by cost of trap
-            // for stun, multiply by 150, divide by 100 = 1.5
-            // for bomb, multiply by 750, divide by 200 = 3.75
-            // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-            double stunEV = numFriendlies * 1.5 * 2;
-            double bombEV = numEnemies * 3.75;
-
-            if(stunEV >= bombEV) {
-                // System.out.println("stun");
+                if(stunEV >= bombEV) {
+                    // System.out.println("stun");
+                    best = TrapType.STUN;
+                } else {
+                    // System.out.println("bomb");
+                    best = TrapType.EXPLOSIVE;
+                }
+            } else {            
                 best = TrapType.STUN;
-            } else {
-                // System.out.println("bomb");
-                best = TrapType.EXPLOSIVE;
             }
-        } else {            
-            best = TrapType.STUN;
         }
+
 
         MapLocation buildTarget = buildTarget(best);
         if (rc.canBuild(best, buildTarget)) {
