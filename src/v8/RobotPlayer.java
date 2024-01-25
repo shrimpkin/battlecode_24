@@ -234,10 +234,7 @@ public strictfp class RobotPlayer {
         indicator += "t: ";
         target = getTarget();
 
-        //used as random movement if we don't have a target
-        Direction dir = Utils.randomDirection();
         boolean hasFlag = rc.hasFlag();
-
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
 
@@ -255,22 +252,16 @@ public strictfp class RobotPlayer {
                     rc.move(towardsTarget);
                 }
 
-                // ok then just move random
-                int tries = 0;
-                while (rc.getMovementCooldownTurns() == 0) {
-                    Direction rand = Utils.randomDirection();
-                    if (rc.canMove(rand)) rc.move(rand);
-                    tries++;
-
-                    if (tries > 5) break;
-                }
+                // Else random move
+                Utils.randomMove(5);
             }
         } else {
-            if (rc.canMove(dir)) rc.move(dir);
+            // Random move if no target found
+            Utils.randomMove(5);
         }
 
-        //updating shared array that a flag was dropped off during
-        //this robots movement
+        // updating shared array that a flag was dropped off during
+        // this robots movement
         if(rc.hasFlag() != hasFlag) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
