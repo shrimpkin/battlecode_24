@@ -157,7 +157,7 @@ public strictfp class RobotPlayer {
         }
         
         //writing enemy flags into shared array
-        if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0 || SA.getLocation(SA.TARGET_ENEMY_FLAG).equals(new MapLocation(0,0))) {
+        if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0) {
             
             if(nearbyFlags.length > 0) {
                 FlagInfo info = nearbyFlags[0];
