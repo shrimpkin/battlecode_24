@@ -1,4 +1,4 @@
-package v7;
+package v8test;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -19,6 +19,7 @@ public class Utils {
         Direction.SOUTHWEST,
         Direction.WEST,
         Direction.NORTHWEST,
+        Direction.CENTER
     };
 
     static final Random rng = new Random(6147);
@@ -71,5 +72,21 @@ public class Utils {
         if (value < min) return min;
         if (value > max) return max;
         return value;
+    }
+
+    public static boolean randomMove(int maxTries) throws GameActionException {
+        int tries = 0;
+        while (rc.getMovementCooldownTurns() == 0) {
+            Direction rand = randomDirection();
+            if (rc.canMove(rand)) {
+                rc.move(rand);
+                return true;
+            }
+            tries++;
+
+            if (tries >= maxTries) break;
+        }
+
+        return false;
     }
 }

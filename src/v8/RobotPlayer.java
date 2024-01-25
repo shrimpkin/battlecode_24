@@ -223,7 +223,6 @@ public strictfp class RobotPlayer {
         MapLocation target;
         //this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag()) {
-
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
@@ -247,27 +246,9 @@ public strictfp class RobotPlayer {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            int maxTries = 0;
-            do {
-                Pathfinding.initTurn();
-                Pathfinding.move(target);
-                maxTries++;
-            }  while (maxTries < 10 && Clock.getBytecodesLeft() + 5000 > 10000);
-
-            // if we can still move (pathfinding failed), try to move in direction of our target
-            if (rc.getMovementCooldownTurns() == 0) {
-                Direction towardsTarget = rc.getLocation().directionTo(target);
-                if (rc.canMove(towardsTarget)) {
-                    rc.move(towardsTarget);
-                }
-
-                // Else random move
-                Utils.randomMove(5);
-            }
-        } else {
-            // Random move if no target found
-            Utils.randomMove(5);
-        }
+            Pathfinding.initTurn();
+            Pathfinding.move(target); 
+        } 
 
         // updating shared array that a flag was dropped off during
         // this robots movement
