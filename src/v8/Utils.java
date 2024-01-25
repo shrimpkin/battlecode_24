@@ -83,7 +83,7 @@ public class Utils {
             }
             tries++;
 
-            if (tries > maxTries) break;
+            if (tries >= maxTries) break;
         }
 
         return false;

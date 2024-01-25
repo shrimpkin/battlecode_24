@@ -242,8 +242,12 @@ public strictfp class RobotPlayer {
                 rc.fill(rc.getLocation().add(towards));
             }
 
-            Pathfinding.initTurn();
-            Pathfinding.move(target);
+            int maxTries = 0;
+            do {
+                Pathfinding.initTurn();
+                Pathfinding.move(target);
+                maxTries++;
+            }  while (maxTries < 10 && Clock.getBytecodesLeft() + 5000 > 10000);
 
             // if we can still move (pathfinding failed), try to move in direction of our target
             if (rc.getMovementCooldownTurns() == 0) {
