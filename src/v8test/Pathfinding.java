@@ -1,4 +1,4 @@
-package v7;
+package v8test;
 
 import battlecode.common.Direction;
 import battlecode.common.GameConstants;
@@ -74,18 +74,14 @@ public class Pathfinding {
         return 1e9;
     }
 
-    static public boolean move(MapLocation loc) {
-        if (!rc.isMovementReady()) return false;
+    static public void move(MapLocation loc) {
+        if (!rc.isMovementReady()) return;
         target = loc;
-        boolean[] bugNavResp = BugNav.move();
-        boolean hasBotMoved = bugNavResp[1];
-        if (!bugNavResp[0]) {
-            return greedyPath();
-        }
-        return hasBotMoved;
+        if (!BugNav.move()) greedyPath();
+        //BugNav.move();
     }
 
-    static boolean greedyPath() {
+    static void greedyPath() {
         try {
             MapLocation myLoc = rc.getLocation();
             Direction bestDir = null;
@@ -117,11 +113,10 @@ public class Pathfinding {
             if (contRubble != 0) {
                 avgRubbleCost = avgR / contRubble;
             }
-            if (bestDir != null) { rc.move(bestDir); return true;}
+            if (bestDir != null) rc.move(bestDir);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return false;
     }
 
     static boolean strictlyCloser(MapLocation newLoc, MapLocation oldLoc, MapLocation target) {
@@ -146,7 +141,7 @@ public class Pathfinding {
         static MapLocation prevTarget = null; //previous target
         static HashSet<Integer> visited = new HashSet<>();
 
-        static boolean[] move() {
+        static boolean move() {
             try {
                 //different target? ==> previous data does not help!
                 if (prevTarget == null || target.distanceSquaredTo(prevTarget) > 0) resetPathfinding();
@@ -178,7 +173,7 @@ public class Pathfinding {
                 for (int i = 8; i-- > 0; ) {
                     if (canMove(dir)) {
                         rc.move(dir);
-                        return new boolean[]{true, true};
+                        return true;
                     }
                     MapLocation newLoc = myLoc.add(dir);
                     if (!rc.onTheMap(newLoc)) rotateRight = !rotateRight;
@@ -188,14 +183,11 @@ public class Pathfinding {
                     else dir = dir.rotateLeft();
                 }
 
-                if (canMove(dir)) {
-                    rc.move(dir);
-                    return new boolean[]{true, true};
-                }
+                if (canMove(dir)) rc.move(dir);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return new boolean[]{true, false};
+            return true;
         }
 
         //clear some of the previous data

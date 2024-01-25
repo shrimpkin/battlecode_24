@@ -1,7 +1,9 @@
-package v7;
+package v8test;
 
 import battlecode.common.*;
 import scala.util.Random;
+
+import java.util.ArrayList;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -14,7 +16,6 @@ public strictfp class RobotPlayer {
     static int ID = 0;
     static int NUM_ROBOTS_TO_DEFEND = 0;
     static int NUM_ROBOTS_TO_ESCORT = 0;
-    static int MAX_NUM_ROBOTS_TO_ESCORT = 3;
     static int ENEMIES_PER_TRAP = 3;
 
 
@@ -92,9 +93,6 @@ public strictfp class RobotPlayer {
         //in a turn
         rc.writeSharedArray(SA.INDEXING, rc.readSharedArray(SA.INDEXING) + 1);
         ID = rc.readSharedArray(SA.INDEXING);
-        if(rc.readSharedArray(SA.INDEXING) == 50) {
-            rc.writeSharedArray(SA.INDEXING, 0);
-        }
         rng.setSeed(baseSeed + ID); // add some variation so bots don't have the same targeting
         // write initial value for symmetry query (all symmetries possible)
         rc.writeSharedArray(SA.symmetry, 0b111);
@@ -125,15 +123,23 @@ public strictfp class RobotPlayer {
             }
         }
 
+        MapLocation target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        int minDist = Integer.MAX_VALUE;
+        MapLocation bestSpawn = null;
+
         //randomly spawning
         for(MapLocation spawn : spawnLocs) {
-            if (rc.canSpawn(spawn)) {
-                indicator += "RND ";
-                rc.spawn(spawn);
-                return true;
+            if (rc.canSpawn(spawn) && target.distanceSquaredTo(spawn) < minDist) {
+                bestSpawn = spawn;
+                minDist = target.distanceSquaredTo(bestSpawn);
             }
         }
 
+        if(bestSpawn != null) {
+            rc.spawn(bestSpawn);
+            return true;
+        }
+        
         return false;
     }
 
@@ -216,8 +222,7 @@ public strictfp class RobotPlayer {
 
         MapLocation target;
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag()) {
-
+        if(Utils.isEnemies() && !rc.hasFlag() && !Combat.isUseless()) {
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
@@ -233,66 +238,20 @@ public strictfp class RobotPlayer {
         indicator += "t: ";
         target = getTarget();
 
-        //used as random movement if we don't have a target
         boolean hasFlag = rc.hasFlag();
-        boolean hasBotMoved = false;
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
 
-            MapLocation newLoc = rc.getLocation().add(towards);
-
-            if(rc.canFill(newLoc)) {
-                rc.fill(newLoc);
-           }
-
-            Pathfinding.initTurn();
-
-            // TODO: Experiment with this more, this does seem to win games faster
-            // With just Pathfinding.move(target) here (and the random direction without case)
-            // It was winning against v8 in 578 moves on AceOfSpades now 498
-            // It seems really odd, will test against in scrims using v8 as a base
-            /*
-                Comapred to before this
-                Aceofspades- faster win
-                Small- won tie instead of lose tie
-                Large-Was lose, now lose on tie
-                Medium- win tie
-                Huge-v8 won quicker
-                Alien- was lose now lose tie
-                Ambush- win 959 -> win 453
-                Bc24-same
-                Bigducksbigpond-was lose  now lose tie
-                Canals-won slower
-                Ch3353-lose slower
-                Duck- was win tie now lose tie
-                Hockey-same
-                Rivers- lose slower
-                Maze runner- win tie
-                Snake-same
-                Yinyang-now win tie
-                Steamboat- win 1636 -> win 1112
-                Soccer- win 1152 -> lose 1456
-             */
-            int estimatePathFindBytecode = 10000;
-            int attemps = 0;
-            while (!hasBotMoved && Clock.getBytecodesLeft() >= estimatePathFindBytecode + 5000) {
-                hasBotMoved = Pathfinding.move(target);
-                attemps++;
-                if (attemps >= 3) {
-                    break;
-                }
+            if(rc.canFill(rc.getLocation().add(towards))) {
+                rc.fill(rc.getLocation().add(towards));
             }
 
-        }
+            Pathfinding.initTurn();
+            Pathfinding.move(target); 
+        } 
 
-        if (!hasBotMoved) {
-            // Pick a random direction if no target
-            Direction dir = Utils.randomDirection();
-            if (rc.canMove(dir)) rc.move(dir);
-        }
-
-        //updating shared array that a flag was dropped off during
-        //this robots movement
+        // updating shared array that a flag was dropped off during
+        // this robots movement
         if(rc.hasFlag() != hasFlag) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
@@ -336,32 +295,12 @@ public strictfp class RobotPlayer {
         //attempts to return flag to closest spawn location
         //TODO: avoid enemies
         //attempts to return flag to closest spawn location
-        if(rc.hasFlag() && !hasMyFlag()) {
+        if(rc.hasFlag()) {
             target = FlagReturn.getReturnTarget();
             indicator += FlagReturn.indicator;
             return target;
         }
-
-        // Escorts a robot with a flag
-        // Prioritized above defender bots, since when a flag comes back we can stop defending and escort
-        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 9           //is near flag carrier
-                && SA.getPrefix(SA.escort) < MAX_NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
-                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
-
-            RobotInfo[] numEnemiesNearby = rc.senseNearbyRobots(9, rc.getTeam().opponent());
-            // if we're being chased drop stuns
-            if (numEnemiesNearby.length > 0) {
-                if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
-                    rc.build(TrapType.STUN, rc.getLocation());
-                }
-            }
-
-            target = SA.getLocation(SA.escort);
-            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
-            indicator += "Escorting " + SA.getPrefix(SA.escort);
-            return target;
-        }
-
+        
         //controls defense
         if(ID <= 3) {            
             target = getFlagDefense();
@@ -374,9 +313,8 @@ public strictfp class RobotPlayer {
             return target;
         }
 
-        // Sends robots to defend
-        // TODO: Maybe handle this more like escort logic
-       if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
+        // Sends robots to defend 
+        if(ID <= NUM_ROBOTS_TO_DEFEND && SA.getPrefix(SA.defend) == 1) {
             target = SA.getLocation(SA.defend);
             if(rc.canSenseLocation(target) && rc.senseNearbyFlags(-1, rc.getTeam()).length == 0) {
                 rc.writeSharedArray(SA.defend, 0);
@@ -384,9 +322,20 @@ public strictfp class RobotPlayer {
             return target;
         }
 
-        // Grab crumbs if nearby
-        MapLocation[] locations = rc.senseNearbyCrumbs(-1);
-        if(locations.length > 0)  return locations[0];
+        //Escorts a robot with a flag 
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
+                && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
+                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
+            target = SA.getLocation(SA.escort);
+            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            indicator += "Escorting " + SA.getPrefix(SA.escort);
+            return target;
+        }
+
+        // Target crumbs if nearby
+        // This covers the case crumbs are revealed after wall fall
+        MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
+        if(crumLocs.length > 0) return crumLocs[0];
 
         //Grabs crumbs if we have no other goals in life
         if(rc.getRoundNum() < 200) {

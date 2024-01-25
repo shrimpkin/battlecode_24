@@ -31,6 +31,9 @@ public class Combat {
     static int OUTNUMBER = 2;
     static int IS_STUCK_TURNS = 3;
 
+    static int NEAR_FRIEND_BONUS = 20;
+    static int NEAR_ENEMY_BONUS = -80;
+
     enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE}
 
     ;
@@ -66,9 +69,6 @@ public class Combat {
      * Should the robot attempt to make the enemies walk into the traps
      */
     public static boolean shouldTrap() throws GameActionException {
-        //hard coding a little retreat at the beginning to make them walk into our traps 
-        if(rc.getRoundNum() >= 200 && rc.getRoundNum() <= 203 && averageTrap != null) return true;
-
         return averageNearTrap != null                                      //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
@@ -92,19 +92,7 @@ public class Combat {
         numEnemies = enemies.length;
         numFriendlies = friendlies.length;
 
-        if (numEnemies < 6) { // a bit of micro-opt for sparse maps,
-            numEnemiesAttackingUs = 0;
-            for (RobotInfo enemy : enemies) {
-                //this checks if an enemy could attack the current robot
-                if (rc.getLocation().isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                    numEnemiesAttackingUs++;
-                }
-            }
-        } else
-            numEnemiesAttackingUs = rc.senseNearbyRobots(
-                    GameConstants.ATTACK_RADIUS_SQUARED,
-                    rc.getTeam().opponent()
-            ).length;
+        numEnemiesAttackingUs = rc.senseNearbyRobots(GameConstants.ATTACK_RADIUS_SQUARED,rc.getTeam().opponent()).length;
     }
     
     /**
@@ -196,26 +184,32 @@ public class Combat {
     public static Direction getDefensiveDirection() throws GameActionException {
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
-        int bestEnemiesSeen = Integer.MAX_VALUE;
+        int bestScore = -60000;
 
         for (Direction dir : dirsToConsider) {
             if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
                 MapLocation targetLocation = rc.getLocation().add(dir);
-                int potentialEnemies = 0;
+                int currentScore = 0;
                 for (RobotInfo enemy : enemies) {
                     //this checks if an enemy could attack the current robot
                     if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        potentialEnemies++;
+                        currentScore += NEAR_ENEMY_BONUS; 
                     }
                 }
 
-                if (potentialEnemies < bestEnemiesSeen) {
-                    bestDirectionSoFar = dir;
-                    bestEnemiesSeen = potentialEnemies;
+                for(RobotInfo friend : friendlies) {
+                    if (targetLocation.isWithinDistanceSquared(friend.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
+                        currentScore += NEAR_FRIEND_BONUS; 
+                    }
                 }
+
+                if (currentScore > bestScore) {
+                    bestDirectionSoFar = dir;
+                    bestScore = currentScore;
+                } 
             }
         }
-
+        indicator += bestScore + " ";
         return bestDirectionSoFar;
     }
 
@@ -245,17 +239,6 @@ public class Combat {
             }
         }
 
-        // If we haven't found a direction lets just pick one that's valid.
-        if (bestDirectionSoFar == Direction.CENTER) {
-            for (RobotInfo x : enemies) {
-                Direction d = rc.getLocation().directionTo(x.getLocation());
-                if (rc.canMove(d)) {
-                    bestDirectionSoFar = d;
-                    break;
-                }
-            }
-        }
-
         return bestDirectionSoFar;
     }
 
@@ -276,8 +259,8 @@ public class Combat {
                 return rc.getLocation().directionTo(flagLocation);
             }
         }
-        return getOffensiveDirection();
 
+        return getOffensiveDirection();
     }
 
     /**
@@ -331,22 +314,19 @@ public class Combat {
     public static void attack() throws GameActionException {
 
         //attacks any enemy robots it can
-        int minHealth = 1001;
+        int minHealth = Integer.MAX_VALUE;
         MapLocation target = null;
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo robot : enemyRobots) {
+            //attacking flag carier if possible
+            if (robot.hasFlag() && rc.canAttack(robot.getLocation())) {
+                rc.attack(robot.getLocation());
+                indicator += "a: " + target + " ";
+                return;
+            }
+
             if (rc.canAttack(robot.getLocation())
                     && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
-
-
-                /**
-                 * target flag holders over everything else
-                 */
-                if (robot.hasFlag()) {
-                    rc.attack(robot.getLocation());
-                    return;
-                }
-
                 minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
                 target = robot.getLocation();
             }
@@ -360,14 +340,14 @@ public class Combat {
     }
 
     /**
-     *
+     * magic constants where the come from i do not know
+     * where they go who can say
      */
     public static boolean shouldBuild() throws GameActionException {
         boolean output = enemies.length >= 3
-                && ((friendlies.length < enemies.length * OUTNUMBER && rc.getRoundNum() >= 200) || (rc.getRoundNum() > 190 && rc.getRoundNum() < 200))
-                && numTraps <= 2
-                && averageEnemy != null;
-
+                && rc.getRoundNum() > 190 
+                && numTraps * 2 <= enemies.length;
+                
         if (output) indicator += "BUILD ";
         return output;
     }
@@ -383,7 +363,8 @@ public class Combat {
         MapLocation flagLocation = flags[0].getLocation();
 
         for (RobotInfo enemy : enemies) {
-            if (enemy.getLocation().isWithinDistanceSquared(flagLocation, 4)) {
+            //if the enemy is closer to the flag then we are then defend it
+            if (enemy.getLocation().isWithinDistanceSquared(flagLocation, rc.getLocation().distanceSquaredTo(flagLocation))) {
                 return true;
             }
         }
@@ -414,7 +395,7 @@ public class Combat {
         TrapType best = TrapType.NONE;
 
         // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= 250) {
+        if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) {
             // we want to multiply by damage dealt and divide by cost of trap
             // for stun, multiply by 150, divide by 100 = 1.5
             // for bomb, multiply by 750, divide by 250 = 3
@@ -446,7 +427,6 @@ public class Combat {
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
         else if (shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
-        else if (shouldTrap()) mode = CombatMode.TRAP;
         else if (shouldRunAway()) mode = CombatMode.DEF;
 
         Direction dir = Direction.CENTER;
