@@ -29,6 +29,7 @@ public class Combat {
     static MapLocation averageNearTrap;
 
     static int OUTNUMBER = 2;
+    static int IS_STUCK_TURNS = 3;
 
     enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE}
 
@@ -65,12 +66,16 @@ public class Combat {
      * Should the robot attempt to make the enemies walk into the traps
      */
     public static boolean shouldTrap() throws GameActionException {
+        //hard coding a little retreat at the beginning to make them walk into our traps 
+        if(rc.getRoundNum() >= 200 && rc.getRoundNum() <= 203 && averageTrap != null) return true;
+
         return averageNearTrap != null                                      //make sure there is trap
                 && enemies.length >= 3                                      //make sure there is enough enemies 
                 && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
     }
 
     public static void reset() throws GameActionException {
+        locations[rc.getRoundNum()] = rc.getLocation();
         indicator = "";
         resetShouldRunAway();
         resetShouldTrap();
@@ -101,7 +106,23 @@ public class Combat {
                     rc.getTeam().opponent()
             ).length;
     }
+    
+    /**
+     * @return true if the robot has been in combat for the last three rounds
+     *          and has not done anything during those three rounds
+     */
+    public static boolean isUseless() throws GameActionException {
+        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
+            int index = rc.getRoundNum() - i;
 
+            if(index < 0) return false;
+            if(locations[index] == null) return false;
+            if(!locations[index].equals(rc.getLocation())) return false;
+            if(!actionLog[index].equals(ActionMode.NONE)) return false;
+        }
+
+        return true;
+    }
 
     /**
      * Updates average trap and enemy locations
