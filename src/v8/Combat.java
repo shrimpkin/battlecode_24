@@ -15,6 +15,7 @@ public class Combat {
     boolean shouldRunAway;
 
     static int numEnemiesAttackingUs;
+    static int numFriendliesHealingUs;
     static int numFriendlies;
     static int numEnemies;
     static int numTraps;
@@ -29,18 +30,15 @@ public class Combat {
     static MapLocation averageNearTrap;
 
     static int OUTNUMBER = 2;
-    static int IS_STUCK_TURNS = 3;
+    static int IS_STUCK_TURNS = 10;
 
     static int NEAR_FRIEND_BONUS = 20;
     static int NEAR_ENEMY_BONUS = -80;
 
-    enum CombatMode {OFF, DEF, TRAP, FLAG_DEF, FLAG_OFF, NONE}
+    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
-    ;
+    enum ActionMode {HEAL, ATT, NONE};
 
-    enum ActionMode {HEAL, ATT, NONE}
-
-    ;
     static CombatMode[] modeLog;
     static MapLocation[] locations;
     static ActionMode[] actionLog;
@@ -62,30 +60,15 @@ public class Combat {
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs > 0 || (numFriendlies + 1 < numEnemiesAttackingUs) || rc.getHealth() < 800;
-    }
-
-    /**
-     * Should the robot attempt to make the enemies walk into the traps
-     */
-    public static boolean shouldTrap() throws GameActionException {
-        return averageNearTrap != null                                      //make sure there is trap
-                && enemies.length >= 3                                      //make sure there is enough enemies 
-                && !(friendlies.length >= enemies.length * OUTNUMBER);      //make sure we don't already outnumber by a lot
+        return numEnemiesAttackingUs  > 0 
+            || (numFriendlies < numEnemies) 
+            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
     }
 
     public static void reset() throws GameActionException {
         locations[rc.getRoundNum()] = rc.getLocation();
         indicator = "";
-        resetShouldRunAway();
-        resetShouldTrap();
-    }
 
-    /**
-     * resets all constants used in the decision of whether to run away
-     * <p> [bytecode usage: 252 to 328] </p>
-     */
-    public static void resetShouldRunAway() throws GameActionException {
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
 
@@ -93,29 +76,8 @@ public class Combat {
         numFriendlies = friendlies.length;
 
         numEnemiesAttackingUs = rc.senseNearbyRobots(GameConstants.ATTACK_RADIUS_SQUARED,rc.getTeam().opponent()).length;
-    }
-    
-    /**
-     * @return true if the robot has been in combat for the last three rounds
-     *          and has not done anything during those three rounds
-     */
-    public static boolean isUseless() throws GameActionException {
-        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
-            int index = rc.getRoundNum() - i;
+        numFriendliesHealingUs = rc.senseNearbyRobots(GameConstants.ATTACK_RADIUS_SQUARED,rc.getTeam()).length;
 
-            if(index < 0) return false;
-            if(locations[index] == null) return false;
-            if(!locations[index].equals(rc.getLocation())) return false;
-            if(!actionLog[index].equals(ActionMode.NONE)) return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Updates average trap and enemy locations
-     */
-    public static void resetShouldTrap() throws GameActionException {
         MapInfo[] mapInfo = rc.senseNearbyMapInfos();
 
         double averageTrap_x = 0;
@@ -171,12 +133,24 @@ public class Combat {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
+    
     /**
-     * Gets the direction that result in the robot being behind traps
+     * @return true if the robot has been in combat for the last three rounds
+     *          and has not done anything during those three rounds
      */
-    public static Direction getTrapDirection() throws GameActionException {
-        return averageEnemy.directionTo(averageTrap);
+    public static boolean isUseless() throws GameActionException {
+        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
+            int index = rc.getRoundNum() - i;
+
+            if(index < 0) return false;
+            if(locations[index] == null) return false;
+            if(!locations[index].equals(rc.getLocation())) return false;
+            if(!actionLog[index].equals(ActionMode.NONE)) return false;
+        }
+
+        return true;
     }
+
 
     /**
      * Gets the direction that has the least potential attacking enemies
@@ -347,7 +321,7 @@ public class Combat {
         boolean output = enemies.length >= 3
                 && rc.getRoundNum() > 190 
                 && numTraps * 2 <= enemies.length;
-
+                
         if (output) indicator += "BUILD ";
         return output;
     }
@@ -393,30 +367,26 @@ public class Combat {
 
     public static void build() throws GameActionException {
         TrapType best = TrapType.NONE;
-        if(rc.getRoundNum() <= 300) {
-            best = TrapType.EXPLOSIVE;
-        } else {
-            // picking between stun or bomb if possible
-            if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) { // cost of EXPLOSIVE trap
-                // we want to multiply by damage dealt and divide by cost of trap
-                // for stun, multiply by 150, divide by 100 = 1.5
-                // for bomb, multiply by 750, divide by 200 = 3.75
-                // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-                double stunEV = numFriendlies * 1.5 * 2;
-                double bombEV = numEnemies * 3.75;
 
-                if(stunEV >= bombEV) {
-                    // System.out.println("stun");
-                    best = TrapType.STUN;
-                } else {
-                    // System.out.println("bomb");
-                    best = TrapType.EXPLOSIVE;
-                }
-            } else {            
+        // picking between stun or bomb if possible
+        if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) {
+            // we want to multiply by damage dealt and divide by cost of trap
+            // for stun, multiply by 150, divide by 100 = 1.5
+            // for bomb, multiply by 750, divide by 250 = 3
+            // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
+            double stunEV = numFriendlies * 1.5 * 3;
+            int bombEV = numEnemies * 3;
+
+            if(stunEV >= bombEV) {
+                // System.out.println("stun");
                 best = TrapType.STUN;
+            } else {
+                // System.out.println("bomb");
+                best = TrapType.EXPLOSIVE;
             }
+        } else {            
+            best = TrapType.STUN;
         }
-
 
         MapLocation buildTarget = buildTarget(best);
         if (rc.canBuild(best, buildTarget)) {
@@ -443,28 +413,16 @@ public class Combat {
         Direction dir = Direction.CENTER;
 
         switch (mode) {
-            case FLAG_OFF:
-                dir = Combat.getFlagOffensiveDirection();
-                break;
-            case FLAG_DEF:
-                dir = Combat.getFlagProtectionDirection();
-                break;
-            case TRAP:
-                dir = Combat.getTrapDirection();
-                break;
-            case DEF:
-                dir = Combat.getDefensiveDirection();
-                break;
-            case OFF:
-                dir = Combat.getOffensiveDirection();
-                break;
-            case NONE:
-                break;
+            case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
+            case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
+            case DEF: dir = Combat.getDefensiveDirection(); break;
+            case OFF: dir = Combat.getOffensiveDirection(); break;
+            case NONE: break;
         }
 
         modeLog[rc.getRoundNum()] = mode;
 
-        if (mode.equals(CombatMode.TRAP) || mode.equals(CombatMode.DEF)) {
+        if (mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
