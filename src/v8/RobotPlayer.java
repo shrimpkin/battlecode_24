@@ -58,6 +58,12 @@ public strictfp class RobotPlayer {
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
                 MapLocation init = rc.getLocation();
+                if (ID <= 3) {
+                    // is a defender
+                    if (rc.getRoundNum() < 200 && SA.getPrefix(ID-1) == 0) {
+                        defenderSetup();
+                    }
+                }
                 globals();
                 flagStuff();
                 move();
@@ -78,6 +84,59 @@ public strictfp class RobotPlayer {
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
+    }
+
+    public static boolean defenderSetup() throws GameActionException {
+        if (rc.hasFlag()) {
+            MapLocation curPos = rc.getLocation();
+            // TODO: We should use the distance to the wall, not pure middle
+            MapLocation mapCenter = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+            Direction awayFromCenter = curPos.directionTo(mapCenter).opposite();
+            Direction targetDirection = awayFromCenter;
+
+            MapLocation targetFlagPos = getFlagDefense();
+            int tries = 0;
+            int maxOffset = 3;
+            do {
+                targetFlagPos = getFlagDefense();
+                if (tries != 0) {
+                    if (tries >= Utils.directions.length) {
+                        // uh ok no direction is valid that is cool
+                        break;
+                    }
+                    targetDirection = Utils.directions[tries-1];
+                }
+
+                // try offset 3
+                for (int j = 0; j < maxOffset; j++) {
+                    targetFlagPos = targetFlagPos.add(targetDirection);
+                    if (!Utils.isValidPosition(targetFlagPos)) {
+                        targetFlagPos = targetFlagPos.subtract(targetDirection);
+                        break;
+                    }
+                }
+                tries++;
+            } while (!Utils.isValidPosition(targetFlagPos));
+
+            if (rc.getLocation().equals(targetFlagPos)) {
+                if (rc.canDropFlag(rc.getLocation())) {
+                    rc.dropFlag(rc.getLocation());
+                    rc.writeSharedArray(ID-1, SA.encode(targetFlagPos, 1));
+                    return true;
+                }
+            }
+
+            Pathfinding.move(targetFlagPos);
+        } else {
+            MapLocation flagLoc = getFlagDefense();
+            if (rc.canPickupFlag(flagLoc)) {
+                rc.pickupFlag(flagLoc);
+            } else {
+                if (!rc.getLocation().equals(flagLoc)) Pathfinding.move(flagLoc);
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -430,6 +489,7 @@ public strictfp class RobotPlayer {
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
             for (MapLocation pos : Utils.corners(rc.getLocation())) {
+                if (!Utils.isValidPosition(pos)) continue;
                 MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
                     rc.build(TrapType.STUN, pos);
