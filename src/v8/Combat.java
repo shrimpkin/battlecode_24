@@ -347,6 +347,23 @@ public class Combat {
     }
 
     /**
+     * magic constants where the come from i do not know
+     * where they go who can say
+     */
+    public static boolean shouldBuild() throws GameActionException {
+        boolean output = enemies.length >= 3
+                && rc.getRoundNum() > 190 
+                && numTraps * 2 <= enemies.length;
+
+        if(195 <= rc.getRoundNum() && rc.getRoundNum() <= 205) {
+            return true;
+        }
+                
+        if (output) indicator += "BUILD ";
+        return output;
+    }
+
+    /**
      * checks there is a flag to defend
      * and that enemies are near it
      */
@@ -364,19 +381,6 @@ public class Combat {
         }
 
         return false;
-    }
-
-    /**
-     * magic constants where the come from i do not know
-     * where they go who can say
-     */
-    public static boolean shouldBuild() throws GameActionException {
-        boolean output = enemies.length >= 3
-                && rc.getRoundNum() > 190 
-                && numTraps * 2 <= enemies.length;
-                
-        if (output) indicator += "BUILD ";
-        return output;
     }
 
     /**
@@ -420,6 +424,9 @@ public class Combat {
         } else {            
             best = TrapType.STUN;
         }
+        if(rc.getRoundNum() == 208) {
+            best = TrapType.EXPLOSIVE;
+        }
 
 
         MapLocation buildTarget = buildTarget(best);
@@ -432,15 +439,37 @@ public class Combat {
         }
         boolean canBuildTrap = rc.canBuild(best, buildTarget);
 
-        if(canBuildTrap && buildInSpawn) {
-            rc.build(best, buildTarget);
-        } else if(canBuildTrap) {
-            if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
-                rc.build(best, buildTarget);
-            } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
-                rc.build(best, buildTarget);
+        // if(canBuildTrap && buildInSpawn) {
+        //         rc.build(best, buildTarget);
+        // } else if(canBuildTrap) {
+        //     if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
+        //         rc.build(best, buildTarget);
+        //     } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
+        //         rc.build(best, buildTarget);
+        //     }
+        // }
+
+        // get nearby traps
+        boolean shouldBuildTrap = true;
+        int numNearbyTraps = 0;
+        for(MapInfo adjacentCell : rc.senseNearbyMapInfos(rc.getLocation(), 2)) {
+            if(adjacentCell.getTrapType() != TrapType.NONE) {
+                if(best == TrapType.STUN) {
+                    shouldBuildTrap = false;
+                }
+                numNearbyTraps += 1;
             }
         }
+
+        if(best == TrapType.EXPLOSIVE) {
+            if(numNearbyTraps > 4) {
+                shouldBuildTrap = false;
+            }
+        }
+
+        if(canBuildTrap && shouldBuildTrap) {
+            rc.build(best, buildTarget);
+        }    
     }
 
     /**
