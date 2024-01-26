@@ -187,7 +187,7 @@ public class Combat {
                 } 
             }
         }
-        indicator += bestScore + " ";
+        indicator += "score: " + bestScore + " ";
         return bestDirectionSoFar;
     }
 
@@ -221,13 +221,15 @@ public class Combat {
                 if(canKill) currentScore += KILL_ENEMY_BONUS;
                 if(canDamage) currentScore += DAMAGE_ENEMY_BONUS;
 
+                currentScore += -10 * targetLocation.distanceSquaredTo(averageEnemy);
+
                 if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
                     bestScore = currentScore;
                 }
             }
         }
-        indicator += bestScore + " ";
+        indicator += "score: " + bestScore + " ";
 
         return bestDirectionSoFar;
     }
@@ -457,7 +459,7 @@ public class Combat {
             Combat.attack();
         }
 
-        updateIndicator();
+        indicator += "mode: " + mode + " ";
         target = rc.getLocation().add(dir);
         if (shouldBuild()) build();
     }
