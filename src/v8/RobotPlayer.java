@@ -429,7 +429,18 @@ public strictfp class RobotPlayer {
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
-            for (MapLocation pos : Utils.corners(rc.getLocation())) {
+            MapLocation[] stunTrapLocations = {rc.getLocation().add(Direction.NORTHWEST), rc.getLocation().add(Direction.SOUTHEAST)};
+            MapLocation[] waterTrapLocations = {rc.getLocation().add(Direction.NORTHEAST), rc.getLocation().add(Direction.SOUTHWEST)};
+
+            for (MapLocation pos : waterTrapLocations) {
+                MapInfo pinfo = rc.senseMapInfo(pos);
+                if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.WATER, pos)){
+                    rc.build(TrapType.WATER, pos);
+                    return;
+                }
+            }
+
+            for (MapLocation pos : stunTrapLocations) {
                 MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
                     rc.build(TrapType.STUN, pos);

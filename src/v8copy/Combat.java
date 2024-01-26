@@ -1,4 +1,4 @@
-package v8test;
+package v8copy;
 
 import battlecode.common.Direction;
 import battlecode.common.FlagInfo;
@@ -12,6 +12,7 @@ import battlecode.common.TrapType;
 
 public class Combat {
     static RobotController rc;
+    static int ID;
     boolean shouldRunAway;
 
     static int numEnemiesAttackingUs;
@@ -32,8 +33,23 @@ public class Combat {
     static int OUTNUMBER = 2;
     static int IS_STUCK_TURNS = 10;
 
+    //these are constants used for controlling
+    //the attack and defense directions
+    //TODO: mess around with these 
+    //the more positive this is the more the duck will attempt to be near friends
     static int NEAR_FRIEND_BONUS = 20;
+    // the more negative this is the more the duck will attempt to avoid enemies
     static int NEAR_ENEMY_BONUS = -80;
+    // the more positive this is the more the duck will attempt to kill an enemy
+    static int KILL_ENEMY_BONUS = 1000;
+    // the more positivie this is the more the duck will attempt to damage an enemy
+    static int DAMAGE_ENEMY_BONUS = 200;
+    // the more negative this is the more the duck will attempt to go towards the enemies
+    static int APPROACH_ENEMY_BONUS = -50; 
+    // avoid blocking
+    static int BLOCKING_BONUS = -50;
+    // the more negative this is the more the duck will attempt to not fill in water
+    static int WATER_BONUS = -50;
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -45,24 +61,15 @@ public class Combat {
 
     static MapLocation target;
 
-    public static void init(RobotController r) throws GameActionException {
+    public static void init(RobotController r, int I) throws GameActionException {
         rc = r;
         indicator = "";
-
+        ID = I;
         modeLog = new CombatMode[2001];
         modeLog[0] = CombatMode.NONE;
         locations = new MapLocation[2001];
         actionLog = new ActionMode[2001];
         actionLog[0] = ActionMode.NONE;
-    }
-
-    /**
-     * Adjust the boolean runAway if the robot should run away
-     */
-    public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  > 0 
-            || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
     }
 
     public static void reset() throws GameActionException {
@@ -151,6 +158,14 @@ public class Combat {
         return true;
     }
 
+    /**
+     * Adjust the boolean runAway if the robot should run away
+     */
+    public static boolean shouldRunAway() throws GameActionException {
+        return numEnemiesAttackingUs  > 0 
+            || (numFriendlies < numEnemies) 
+            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
+    }
 
     /**
      * Gets the direction that has the least potential attacking enemies
@@ -183,7 +198,7 @@ public class Combat {
                 } 
             }
         }
-        indicator += bestScore + " ";
+        indicator += "score: " + bestScore + " ";
         return bestDirectionSoFar;
     }
 
@@ -193,25 +208,50 @@ public class Combat {
     public static Direction getOffensiveDirection() throws GameActionException {
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
-        int minEnemies = Integer.MAX_VALUE;
-
+        int bestScore = Integer.MIN_VALUE;
+        boolean canKill;
+        boolean canDamage;
         for (Direction dir : dirsToConsider) {
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
+            MapLocation targetLocation = rc.getLocation().add(dir);
+            boolean isWater = rc.canSenseLocation(targetLocation) && rc.senseMapInfo(targetLocation).isWater();
+            if (rc.canMove(dir) || dir.equals(Direction.CENTER) || (isWater && rc.canFill(targetLocation))) {
+
                 int numEnemies = 0;
-                MapLocation targetLocation = rc.getLocation().add(dir);
+                canKill = false;
+                canDamage = false;
+                int frie = 0;
 
                 for (RobotInfo enemy : enemies) {
                     if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
                         numEnemies++;
+                        canDamage = true;
+                        if(enemy.getHealth() < rc.getAttackDamage()) {
+                            canKill = true;
+                        }
                     }
                 }
 
-                if (numEnemies > 0 && numEnemies < minEnemies) {
+                for(RobotInfo friendly : friendlies) {
+                    if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
+                        frie++;
+                    }
+                }
+
+                int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
+                if(canKill && rc.isActionReady() && !isWater) currentScore += KILL_ENEMY_BONUS;
+                if(canDamage && rc.isActionReady() && !isWater) currentScore += DAMAGE_ENEMY_BONUS;
+
+                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
+                currentScore += frie * BLOCKING_BONUS;
+                if(isWater) currentScore += WATER_BONUS;
+
+                if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
-                    minEnemies = numEnemies;
+                    bestScore = currentScore;
                 }
             }
         }
+        indicator += "score: " + bestScore + " ";
 
         return bestDirectionSoFar;
     }
@@ -321,6 +361,10 @@ public class Combat {
         boolean output = enemies.length >= 3
                 && rc.getRoundNum() > 190 
                 && numTraps * 2 <= enemies.length;
+
+        if(195 <= rc.getRoundNum() && rc.getRoundNum() <= 205) {
+            return true;
+        }
                 
         if (output) indicator += "BUILD ";
         return output;
@@ -387,16 +431,52 @@ public class Combat {
         } else {            
             best = TrapType.STUN;
         }
+        if(rc.getRoundNum() == 208) {
+            best = TrapType.EXPLOSIVE;
+        }
+
 
         MapLocation buildTarget = buildTarget(best);
-        if (rc.canBuild(best, buildTarget)) {
-            if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
-                rc.build(best, buildTarget);
-            } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
-                rc.build(best, buildTarget);
+        boolean buildInSpawn = false;
+        for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
+            if(buildTarget.equals(spawnLoc)) {
+                buildInSpawn = true;
+                break;
             }
-            // System.out.println("built");
         }
+        boolean canBuildTrap = rc.canBuild(best, buildTarget);
+
+        // if(canBuildTrap && buildInSpawn) {
+        //         rc.build(best, buildTarget);
+        // } else if(canBuildTrap) {
+        //     if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
+        //         rc.build(best, buildTarget);
+        //     } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
+        //         rc.build(best, buildTarget);
+        //     }
+        // }
+
+        // get nearby traps
+        boolean shouldBuildTrap = true;
+        int numNearbyTraps = 0;
+        for(MapInfo adjacentCell : rc.senseNearbyMapInfos(rc.getLocation(), 2)) {
+            if(adjacentCell.getTrapType() != TrapType.NONE) {
+                if(best == TrapType.STUN) {
+                    shouldBuildTrap = false;
+                }
+                numNearbyTraps += 1;
+            }
+        }
+
+        if(best == TrapType.EXPLOSIVE) {
+            if(numNearbyTraps > 4) {
+                shouldBuildTrap = false;
+            }
+        }
+
+        if(canBuildTrap && shouldBuildTrap) {
+            rc.build(best, buildTarget);
+        }    
     }
 
     /**
@@ -422,6 +502,12 @@ public class Combat {
 
         modeLog[rc.getRoundNum()] = mode;
 
+        target = rc.getLocation().add(dir);
+        if(rc.canFill(target)) {
+            indicator += "fill ";
+            rc.fill(target);
+        }
+        
         if (mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
@@ -430,9 +516,10 @@ public class Combat {
             Combat.attack();
         }
 
-        updateIndicator();
-        target = rc.getLocation().add(dir);
+        indicator += "mode: " + mode + " ";
         if (shouldBuild()) build();
+
+        updateSA();
     }
 
     /**
@@ -444,5 +531,10 @@ public class Combat {
 
             indicator += "(" + modeLog[i] + "," + actionLog[i] + ") ";
         }
+    }
+
+    public static void updateSA() throws GameActionException {
+        int enc = SA.encode(rc.getLocation(), 0);
+        rc.writeSharedArray(SA.ROBOT_COMBAT_INFO_START + ID - 1, enc);
     }
 }

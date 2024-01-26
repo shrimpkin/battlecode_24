@@ -1,4 +1,4 @@
-package v8test;
+package v8copy;
 
 import battlecode.common.Direction;
 import battlecode.common.GameConstants;

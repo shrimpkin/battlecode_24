@@ -1,4 +1,4 @@
-package v8test;
+package v8copy;
 
 import battlecode.common.*;
 import scala.util.Random;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 public strictfp class RobotPlayer {
 
     //number that indicates when the robot move in the turn
-    static int ID = 0;
+    static public int ID = 0;
     static int NUM_ROBOTS_TO_DEFEND = 0;
     static int NUM_ROBOTS_TO_ESCORT = 0;
     static int ENEMIES_PER_TRAP = 3;
@@ -86,7 +86,7 @@ public strictfp class RobotPlayer {
     public static void init() throws GameActionException {        
         SA.init(rc.getMapWidth(), rc.getMapHeight(), rc);
         Pathfinding.init(rc);
-        Combat.init(rc);
+        Combat.init(rc, ID);
         Utils.init(rc);
         FlagReturn.init(rc);
         MapRecorder.init(rc);
@@ -228,7 +228,7 @@ public strictfp class RobotPlayer {
 
         MapLocation target;
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag()) {
+        if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() > 150) {
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
@@ -482,7 +482,7 @@ public strictfp class RobotPlayer {
         // in an attempt to make not everyone end up specialized as healers
         // lets assign 15 healers ID [20,35] with a higher change to heal
         // todo: investigate this more
-        boolean shouldHeal = false;
+        boolean shouldHeal = true;
 
         // check if enemy in face
         RobotInfo[] enemiesNearby = rc.senseNearbyRobots(4, rc.getTeam().opponent());
@@ -522,5 +522,9 @@ public strictfp class RobotPlayer {
             rc.heal(target);
             indicator += "h: " + target + " ";
         }
+    }
+
+    public int ID() {
+        return ID;
     }
 }

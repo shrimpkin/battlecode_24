@@ -45,9 +45,11 @@ public class Combat {
     // the more positivie this is the more the duck will attempt to damage an enemy
     static int DAMAGE_ENEMY_BONUS = 200;
     // the more negative this is the more the duck will attempt to go towards the enemies
-    static int APPROACH_ENEMY_BONUS = -10; 
+    static int APPROACH_ENEMY_BONUS = -50; 
     // avoid blocking
     static int BLOCKING_BONUS = -50;
+    // the more negative this is the more the duck will attempt to not fill in water
+    static int WATER_BONUS = -50;
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -210,13 +212,15 @@ public class Combat {
         boolean canKill;
         boolean canDamage;
         for (Direction dir : dirsToConsider) {
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
+            MapLocation targetLocation = rc.getLocation().add(dir);
+            boolean isWater = rc.canSenseLocation(targetLocation) && rc.senseMapInfo(targetLocation).isWater();
+            if (rc.canMove(dir) || dir.equals(Direction.CENTER) || (isWater && rc.canFill(targetLocation))) {
+
                 int numEnemies = 0;
-                MapLocation targetLocation = rc.getLocation().add(dir);
                 canKill = false;
                 canDamage = false;
                 int frie = 0;
-                
+
                 for (RobotInfo enemy : enemies) {
                     if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
                         numEnemies++;
@@ -234,11 +238,13 @@ public class Combat {
                 }
 
                 int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
-                if(canKill && rc.isActionReady()) currentScore += KILL_ENEMY_BONUS;
-                if(canDamage && rc.isActionReady()) currentScore += DAMAGE_ENEMY_BONUS;
+                if(canKill && rc.isActionReady() && !isWater) currentScore += KILL_ENEMY_BONUS;
+                if(canDamage && rc.isActionReady() && !isWater) currentScore += DAMAGE_ENEMY_BONUS;
 
                 currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
                 currentScore += frie * BLOCKING_BONUS;
+                if(isWater) currentScore += WATER_BONUS;
+
                 if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
                     bestScore = currentScore;
@@ -496,6 +502,12 @@ public class Combat {
 
         modeLog[rc.getRoundNum()] = mode;
 
+        target = rc.getLocation().add(dir);
+        if(rc.canFill(target)) {
+            indicator += "fill ";
+            rc.fill(target);
+        }
+        
         if (mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
