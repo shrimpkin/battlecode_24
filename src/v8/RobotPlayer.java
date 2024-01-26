@@ -482,7 +482,7 @@ public strictfp class RobotPlayer {
         // in an attempt to make not everyone end up specialized as healers
         // lets assign 15 healers ID [20,35] with a higher change to heal
         // todo: investigate this more
-        boolean shouldHeal = false;
+        /*boolean shouldHeal = false;
 
         // check if enemy in face
         RobotInfo[] enemiesNearby = rc.senseNearbyRobots(4, rc.getTeam().opponent());
@@ -493,7 +493,7 @@ public strictfp class RobotPlayer {
             shouldHeal = true;
         }
 
-        /*if (ID >= 4 && ID <= 30) {
+        if (ID >= 4 && ID <= 30) {
             shouldHeal = true;
         } else {
             // lets assign a chance for this to heal
@@ -501,9 +501,9 @@ public strictfp class RobotPlayer {
             // save our cooldown for more attacks
             minHealth = 750;
                 shouldHeal = true;
-        }*/
+        }
 
-        if (!shouldHeal) return;
+        if (!shouldHeal) return;*/
 
         for(RobotInfo robot : friendlyRobots) {
             if(rc.canHeal(robot.getLocation())) {
