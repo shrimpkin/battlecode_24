@@ -389,7 +389,14 @@ public class Combat {
         }
 
         MapLocation buildTarget = buildTarget(best);
-        if (rc.canBuild(best, buildTarget)) rc.build(best, buildTarget);
+        if (rc.canBuild(best, buildTarget)) {
+            if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
+                rc.build(best, buildTarget);
+            } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
+                rc.build(best, buildTarget);
+            }
+            // System.out.println("built");
+        }
     }
 
     /**

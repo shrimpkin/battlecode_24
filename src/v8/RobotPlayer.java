@@ -228,7 +228,7 @@ public strictfp class RobotPlayer {
 
         MapLocation target;
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag()) {
+        if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() > 150) {
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
