@@ -64,7 +64,9 @@ public strictfp class RobotPlayer {
                 SA.updateMap();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                fill();
+                if(rc.getRoundNum() >= 190) {
+                    fill();
+                }
                 MapLocation result = rc.getLocation();
                 if (!init.equals(result)) MapRecorder.updateSurroundings();
             }
@@ -241,10 +243,19 @@ public strictfp class RobotPlayer {
         boolean hasFlag = rc.hasFlag();
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
+            MapLocation moveTarget = rc.getLocation().add(towards);
 
-            if(rc.canFill(rc.getLocation().add(towards))) {
-                rc.fill(rc.getLocation().add(towards));
+            for(MapLocation corner : Utils.corners(rc.getLocation())) {
+                if(moveTarget.equals(corner)) {
+                    // System.out.println("INITIAL PHASE");
+                    if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                }
             }
+
+
+            // if(rc.canFill(rc.getLocation().add(towards))) {
+            //     rc.fill(rc.getLocation().add(towards));
+            // }
 
             Pathfinding.initTurn();
             Pathfinding.move(target); 
@@ -439,12 +450,22 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void fill() throws GameActionException {
-        if(!Utils.isEnemies()) {
+        // if(!Utils.isEnemies()) {
+            // MapLocation target = getTarget();
+            // for(MapLocation corner : Utils.corners(rc.getLocation())) {
+            //     if(target == corner) {
+            //         if(target != null) {
+            //             System.out.println("EXTRA BYTECODE");
+            //             if(rc.canFill(target)) rc.fill(target);
+            //         }        
+            //     }
+            // }
+
             MapInfo[] mapInfo = rc.senseNearbyMapInfos();
             for(MapInfo info : mapInfo) {
                 if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
             }
-        }
+        // }
     }
 
     public static void heal() throws GameActionException {
