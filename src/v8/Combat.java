@@ -404,14 +404,25 @@ public class Combat {
             best = TrapType.STUN;
         }
 
+
         MapLocation buildTarget = buildTarget(best);
-        if (rc.canBuild(best, buildTarget)) {
+        boolean buildInSpawn = false;
+        for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
+            if(buildTarget.equals(spawnLoc)) {
+                buildInSpawn = true;
+                break;
+            }
+        }
+        boolean canBuildTrap = rc.canBuild(best, buildTarget);
+
+        if(canBuildTrap && buildInSpawn) {
+            rc.build(best, buildTarget);
+        } else if(canBuildTrap) {
             if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
                 rc.build(best, buildTarget);
             } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
                 rc.build(best, buildTarget);
             }
-            // System.out.println("built");
         }
     }
 
