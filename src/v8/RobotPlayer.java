@@ -245,21 +245,41 @@ public strictfp class RobotPlayer {
         target = getTarget();
 
         boolean hasFlag = rc.hasFlag();
-        if(target != null) {
+        if(target != null) { // have a target to move to
+            // need to check if the target is obstructed first, and if so, fill it
+            // but if the target is obstructed, check left and right is also obstructed
+            // if left and right also obstructed, then we dig
+            // otherwise go to whichever location is unobstructed
+
+            // main issue: how do we get the two "left" and "right" directions??
+            // solve: implementing clockwise and counterclockwise functions
+
             Direction towards = rc.getLocation().directionTo(target);
+            Direction cw = Utils.getClockwiseDirection(towards);
+            Direction ccw = Utils.getCounterClockwiseDirection(towards);
+
             MapLocation moveTarget = rc.getLocation().add(towards);
 
-            for(MapLocation corner : Utils.corners(rc.getLocation())) {
-                if(moveTarget.equals(corner)) {
-                    // System.out.println("INITIAL PHASE");
+            if(rc.senseMapInfo(moveTarget).isWater()) {
+                MapLocation cwTarget = rc.getLocation().add(cw);
+                MapLocation ccwTarget = rc.getLocation().add(ccw);
+                if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater()) {
+                    target = cwTarget;
+                } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater()) {
+                    target = ccwTarget;
+                } else {
                     if(rc.canFill(moveTarget)) rc.fill(moveTarget);
                 }
             }
 
-
-            // if(rc.canFill(rc.getLocation().add(towards))) {
-            //     rc.fill(rc.getLocation().add(towards));
+            // for(MapLocation corner : Utils.corners(rc.getLocation())) {
+            //     if(moveTarget.equals(corner)) {
+            //         // System.out.println("INITIAL PHASE");
+            //         if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+            //     }
             // }
+
+
 
             Pathfinding.initTurn();
             Pathfinding.move(target); 

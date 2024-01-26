@@ -89,4 +89,23 @@ public class Utils {
 
         return false;
     }
+
+    public static Direction getClockwiseDirection(Direction dir) throws GameActionException {
+        int index = java.util.Arrays.asList(directions).indexOf(dir);
+        return directions[(index + 1) % 8];
+    }
+
+    public static Direction getCounterClockwiseDirection(Direction dir) throws GameActionException {
+        int index = java.util.Arrays.asList(directions).indexOf(dir);
+        return directions[(index + 7) % 8];
+    }
+
+    public static boolean isValidMapLocation(MapLocation loc) throws GameActionException {
+        if(0 <= loc.x && loc.x < rc.getMapWidth()) {
+            if(0 <= loc.y && loc.y < rc.getMapHeight()) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
