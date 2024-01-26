@@ -35,10 +35,16 @@ public class Combat {
     //these are constants used for controlling
     //the attack and defense directions
     //TODO: mess around with these 
+    //the more positive this is the more the duck will attempt to be near friends
     static int NEAR_FRIEND_BONUS = 20;
+    // the more negative this is the more the duck will attempt to avoid enemies
     static int NEAR_ENEMY_BONUS = -80;
+    // the more positive this is the more the duck will attempt to kill an enemy
     static int KILL_ENEMY_BONUS = 1000;
+    // the more positivie this is the more the duck will attempt to damage an enemy
     static int DAMAGE_ENEMY_BONUS = 200;
+    // the more negative this is the more the duck will attempt to go towards the enemies
+    static int APPROACH_ENEMY_BONUS = -10; 
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -221,7 +227,7 @@ public class Combat {
                 if(canKill) currentScore += KILL_ENEMY_BONUS;
                 if(canDamage) currentScore += DAMAGE_ENEMY_BONUS;
 
-                currentScore += -10 * targetLocation.distanceSquaredTo(averageEnemy);
+                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
 
                 if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
