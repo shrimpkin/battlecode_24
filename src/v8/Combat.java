@@ -12,6 +12,7 @@ import battlecode.common.TrapType;
 
 public class Combat {
     static RobotController rc;
+    static int ID;
     boolean shouldRunAway;
 
     static int numEnemiesAttackingUs;
@@ -45,6 +46,8 @@ public class Combat {
     static int DAMAGE_ENEMY_BONUS = 200;
     // the more negative this is the more the duck will attempt to go towards the enemies
     static int APPROACH_ENEMY_BONUS = -10; 
+    // avoid blocking
+    static int BLOCKING_BONUS = -50;
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -56,10 +59,10 @@ public class Combat {
 
     static MapLocation target;
 
-    public static void init(RobotController r) throws GameActionException {
+    public static void init(RobotController r, int I) throws GameActionException {
         rc = r;
         indicator = "";
-
+        ID = I;
         modeLog = new CombatMode[2001];
         modeLog[0] = CombatMode.NONE;
         locations = new MapLocation[2001];
@@ -223,12 +226,18 @@ public class Combat {
                     }
                 }
 
+                for(RobotInfo friendly : friendlies) {
+                    if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
+                        numFriendlies++;
+                    }
+                }
+
                 int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
-                if(canKill) currentScore += KILL_ENEMY_BONUS;
-                if(canDamage) currentScore += DAMAGE_ENEMY_BONUS;
+                if(canKill && rc.isActionReady()) currentScore += KILL_ENEMY_BONUS;
+                if(canDamage && rc.isActionReady()) currentScore += DAMAGE_ENEMY_BONUS;
 
                 currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
-
+                currentScore += numFriendlies * BLOCKING_BONUS;
                 if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
                     bestScore = currentScore;
@@ -466,8 +475,9 @@ public class Combat {
         }
 
         indicator += "mode: " + mode + " ";
-        target = rc.getLocation().add(dir);
         if (shouldBuild()) build();
+
+        updateSA();
     }
 
     /**
@@ -479,5 +489,10 @@ public class Combat {
 
             indicator += "(" + modeLog[i] + "," + actionLog[i] + ") ";
         }
+    }
+
+    public static void updateSA() throws GameActionException {
+        int enc = SA.encode(rc.getLocation(), 0);
+        rc.writeSharedArray(SA.ROBOT_COMBAT_INFO_START + ID - 1, enc);
     }
 }
