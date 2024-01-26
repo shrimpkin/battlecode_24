@@ -215,7 +215,8 @@ public class Combat {
                 MapLocation targetLocation = rc.getLocation().add(dir);
                 canKill = false;
                 canDamage = false;
-
+                int frie = 0;
+                
                 for (RobotInfo enemy : enemies) {
                     if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
                         numEnemies++;
@@ -228,7 +229,7 @@ public class Combat {
 
                 for(RobotInfo friendly : friendlies) {
                     if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
-                        numFriendlies++;
+                        frie++;
                     }
                 }
 
@@ -237,7 +238,7 @@ public class Combat {
                 if(canDamage && rc.isActionReady()) currentScore += DAMAGE_ENEMY_BONUS;
 
                 currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
-                currentScore += numFriendlies * BLOCKING_BONUS;
+                currentScore += frie * BLOCKING_BONUS;
                 if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
                     bestScore = currentScore;
