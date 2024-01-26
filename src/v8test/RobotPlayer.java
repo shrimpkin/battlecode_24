@@ -53,7 +53,7 @@ public strictfp class RobotPlayer {
                 spawn();
                 // sacrifice tiny bit of movement in order to ensure all 3 spawns have ducks spawn on them
                 if (rc.getRoundNum() == 1 && ID < 9) Clock.yield();
-            } 
+            }
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
@@ -64,11 +64,12 @@ public strictfp class RobotPlayer {
                 SA.updateMap();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                fill();
+                if(rc.getRoundNum() >= 190) {
+                    fill();
+                }
                 MapLocation result = rc.getLocation();
                 if (!init.equals(result)) MapRecorder.updateSurroundings();
             }
-            
             for (int i = 0; i < 3; i++){
                 if (rc.readSharedArray(i) != 0)
                     rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
@@ -134,6 +135,10 @@ public strictfp class RobotPlayer {
                 bestSpawn = spawn;
                 minDist = target.distanceSquaredTo(bestSpawn);
             }
+        }
+
+        if (bestSpawn == null) {
+
         }
 
         if(bestSpawn != null) {
@@ -223,7 +228,7 @@ public strictfp class RobotPlayer {
 
         MapLocation target;
         //this will be where we attempt to move
-        if(Utils.isEnemies() && !rc.hasFlag() && !Combat.isUseless()) {
+        if(Utils.isEnemies() && !rc.hasFlag()) {
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
@@ -242,10 +247,19 @@ public strictfp class RobotPlayer {
         boolean hasFlag = rc.hasFlag();
         if(target != null) {
             Direction towards = rc.getLocation().directionTo(target);
+            MapLocation moveTarget = rc.getLocation().add(towards);
 
-            if(rc.canFill(rc.getLocation().add(towards))) {
-                rc.fill(rc.getLocation().add(towards));
+            for(MapLocation corner : Utils.corners(rc.getLocation())) {
+                if(moveTarget.equals(corner)) {
+                    // System.out.println("INITIAL PHASE");
+                    if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                }
             }
+
+
+            // if(rc.canFill(rc.getLocation().add(towards))) {
+            //     rc.fill(rc.getLocation().add(towards));
+            // }
 
             Pathfinding.initTurn();
             Pathfinding.move(target); 
@@ -440,12 +454,22 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void fill() throws GameActionException {
-        if(!Utils.isEnemies()) {
+        // if(!Utils.isEnemies()) {
+            // MapLocation target = getTarget();
+            // for(MapLocation corner : Utils.corners(rc.getLocation())) {
+            //     if(target == corner) {
+            //         if(target != null) {
+            //             System.out.println("EXTRA BYTECODE");
+            //             if(rc.canFill(target)) rc.fill(target);
+            //         }        
+            //     }
+            // }
+
             MapInfo[] mapInfo = rc.senseNearbyMapInfos();
             for(MapInfo info : mapInfo) {
                 if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
             }
-        }
+        // }
     }
 
     public static void heal() throws GameActionException {
@@ -454,6 +478,33 @@ public strictfp class RobotPlayer {
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation target = null;
         int minHealth = 1001;
+
+        // in an attempt to make not everyone end up specialized as healers
+        // lets assign 15 healers ID [20,35] with a higher change to heal
+        // todo: investigate this more
+        boolean shouldHeal = false;
+
+        // check if enemy in face
+        RobotInfo[] enemiesNearby = rc.senseNearbyRobots(4, rc.getTeam().opponent());
+        if (enemiesNearby.length > 0) {
+            minHealth = 250;
+            if (rng.nextDouble() > 0.5) shouldHeal = true;
+        } else {
+            shouldHeal = true;
+        }
+
+        /*if (ID >= 4 && ID <= 30) {
+            shouldHeal = true;
+        } else {
+            // lets assign a chance for this to heal
+            // these are attackers only heal if we're in "danger"
+            // save our cooldown for more attacks
+            minHealth = 750;
+                shouldHeal = true;
+        }*/
+
+        if (!shouldHeal) return;
+
         for(RobotInfo robot : friendlyRobots) {
             if(rc.canHeal(robot.getLocation())) {
                 if (robot.hasFlag()) {

@@ -32,8 +32,19 @@ public class Combat {
     static int OUTNUMBER = 2;
     static int IS_STUCK_TURNS = 10;
 
+    //these are constants used for controlling
+    //the attack and defense directions
+    //TODO: mess around with these 
+    //the more positive this is the more the duck will attempt to be near friends
     static int NEAR_FRIEND_BONUS = 20;
+    // the more negative this is the more the duck will attempt to avoid enemies
     static int NEAR_ENEMY_BONUS = -80;
+    // the more positive this is the more the duck will attempt to kill an enemy
+    static int KILL_ENEMY_BONUS = 1000;
+    // the more positivie this is the more the duck will attempt to damage an enemy
+    static int DAMAGE_ENEMY_BONUS = 200;
+    // the more negative this is the more the duck will attempt to go towards the enemies
+    static int APPROACH_ENEMY_BONUS = -10; 
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -54,15 +65,6 @@ public class Combat {
         locations = new MapLocation[2001];
         actionLog = new ActionMode[2001];
         actionLog[0] = ActionMode.NONE;
-    }
-
-    /**
-     * Adjust the boolean runAway if the robot should run away
-     */
-    public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  > 0 
-            || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
     }
 
     public static void reset() throws GameActionException {
@@ -151,6 +153,14 @@ public class Combat {
         return true;
     }
 
+    /**
+     * Adjust the boolean runAway if the robot should run away
+     */
+    public static boolean shouldRunAway() throws GameActionException {
+        return numEnemiesAttackingUs  > 0 
+            || (numFriendlies < numEnemies) 
+            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
+    }
 
     /**
      * Gets the direction that has the least potential attacking enemies
@@ -183,7 +193,7 @@ public class Combat {
                 } 
             }
         }
-        indicator += bestScore + " ";
+        indicator += "score: " + bestScore + " ";
         return bestDirectionSoFar;
     }
 
@@ -193,25 +203,39 @@ public class Combat {
     public static Direction getOffensiveDirection() throws GameActionException {
         Direction[] dirsToConsider = Utils.directions;
         Direction bestDirectionSoFar = Direction.CENTER;
-        int minEnemies = Integer.MAX_VALUE;
-
+        int bestScore = Integer.MIN_VALUE;
+        boolean canKill;
+        boolean canDamage;
         for (Direction dir : dirsToConsider) {
             if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
                 int numEnemies = 0;
                 MapLocation targetLocation = rc.getLocation().add(dir);
+                canKill = false;
+                canDamage = false;
 
                 for (RobotInfo enemy : enemies) {
                     if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
                         numEnemies++;
+                        canDamage = true;
+                        if(enemy.getHealth() < rc.getAttackDamage()) {
+                            canKill = true;
+                        }
                     }
                 }
 
-                if (numEnemies > 0 && numEnemies < minEnemies) {
+                int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
+                if(canKill) currentScore += KILL_ENEMY_BONUS;
+                if(canDamage) currentScore += DAMAGE_ENEMY_BONUS;
+
+                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
+
+                if(currentScore > bestScore) {
                     bestDirectionSoFar = dir;
-                    minEnemies = numEnemies;
+                    bestScore = currentScore;
                 }
             }
         }
+        indicator += "score: " + bestScore + " ";
 
         return bestDirectionSoFar;
     }
@@ -470,7 +494,7 @@ public class Combat {
             Combat.attack();
         }
 
-        updateIndicator();
+        indicator += "mode: " + mode + " ";
         target = rc.getLocation().add(dir);
         if (shouldBuild()) build();
     }
