@@ -207,7 +207,6 @@ public class Combat {
      * Then the enemy with the lowest health
      */
     public static void attack() throws GameActionException {
-
         //attacks any enemy robots it can
         int minHealth = Integer.MAX_VALUE;
         MapLocation target = null;
@@ -220,9 +219,8 @@ public class Combat {
                 return;
             }
 
-            if (rc.canAttack(robot.getLocation())
-                    && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
-                minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
+            if (rc.canAttack(robot.getLocation()) && robot.getHealth() < minHealth) {
+                minHealth = robot.getHealth();
                 target = robot.getLocation();
             }
 
@@ -235,13 +233,12 @@ public class Combat {
     }
 
     /**
-     * magic constants where the come from i do not know
+     * magic constants where they come from i do not know
      * where they go who can say
      */
     public static boolean shouldBuild() throws GameActionException {
         boolean output = enemies.length >= 3
-                && rc.getRoundNum() > 190 
-                && numTraps * 2 <= enemies.length;
+                && rc.getRoundNum() > 190;
 
         if(195 <= rc.getRoundNum() && rc.getRoundNum() <= 205) {
             return true;
@@ -291,68 +288,10 @@ public class Combat {
     }
 
     public static void build() throws GameActionException {
-        TrapType best = TrapType.NONE;
-
-        // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) {
-            // we want to multiply by damage dealt and divide by cost of trap
-            // for stun, multiply by 150, divide by 100 = 1.5
-            // for bomb, multiply by 750, divide by 250 = 3
-            // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-            double stunEV = numFriendlies * 1.5 * 3;
-            int bombEV = numEnemies * 3;
-
-            if(stunEV >= bombEV) {
-                // System.out.println("stun");
-                best = TrapType.STUN;
-            } else {
-                // System.out.println("bomb");
-                best = TrapType.EXPLOSIVE;
-            }
-        } else {            
-            best = TrapType.STUN;
-        }
-        
-        MapLocation buildTarget = buildTarget(best);
-        boolean buildInSpawn = false;
-        for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
-            if(buildTarget.equals(spawnLoc)) {
-                buildInSpawn = true;
-                break;
-            }
-        }
-        boolean canBuildTrap = rc.canBuild(best, buildTarget);
-
-        // if(canBuildTrap && buildInSpawn) {
-        //         rc.build(best, buildTarget);
-        // } else if(canBuildTrap) {
-        //     if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
-        //         rc.build(best, buildTarget);
-        //     } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
-        //         rc.build(best, buildTarget);
-        //     }
-        // }
-
-        // get nearby traps
-        boolean shouldBuildTrap = true;
-        int numNearbyTraps = 0;
-        for(MapInfo adjacentCell : rc.senseNearbyMapInfos(rc.getLocation(), 2)) {
-            if(adjacentCell.getTrapType() != TrapType.NONE) {
-                if(best == TrapType.STUN) {
-                    shouldBuildTrap = false;
-                }
-                numNearbyTraps += 1;
-            }
-        }
-
-        if(best == TrapType.EXPLOSIVE) {
-            if(numNearbyTraps > 4) {
-                shouldBuildTrap = false;
-            }
-        }
-
-        if(canBuildTrap && shouldBuildTrap) {
-            rc.build(best, buildTarget);
+        MapLocation buildTarget = buildTarget(TrapType.STUN);
+        boolean canBuildTrap = rc.canBuild(TrapType.STUN, buildTarget);
+        if(canBuildTrap) {
+            rc.build(TrapType.STUN, buildTarget);
         }    
     }
 
@@ -386,7 +325,7 @@ public class Combat {
             rc.fill(target);
         }
         
-        if (micro.shouldAttackFirst) {
+        if (mode.equals(CombatMode.FLAG_OFF) || mode.equals(CombatMode.FLAG_DEF) || micro.shouldAttackFirst) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
