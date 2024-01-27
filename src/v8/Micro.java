@@ -111,7 +111,8 @@ public class Micro {
             if(dist < minDistanceToEnemy) minDistanceToEnemy = dist;
             if(dist <= GameConstants.ATTACK_RADIUS_SQUARED) DPSreceived += DPS;
             if(dist <= GameConstants.ATTACK_RADIUS_SQUARED) enemiesTargeting++;
-            if(dist <= GameConstants.ATTACK_RADIUS_SQUARED && unit.getHealth() < minHealth) minHealth = unit.getHealth();
+            if(dist <= GameConstants.ATTACK_RADIUS_SQUARED
+                && unit.getHealth() < minHealth) minHealth = unit.getHealth();
         }
 
         void updateAlly(RobotInfo unit) {
