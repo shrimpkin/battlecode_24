@@ -259,7 +259,12 @@ public strictfp class RobotPlayer {
             Direction ccw = Utils.getCounterClockwiseDirection(towards);
 
             MapLocation moveTarget = rc.getLocation().add(towards);
+            
 
+            if(Utils.isNearFlag(-1)) {
+                if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+
+            } else 
             if(rc.senseMapInfo(moveTarget).isWater()) {
                 MapLocation cwTarget = rc.getLocation().add(cw);
                 MapLocation ccwTarget = rc.getLocation().add(ccw);
@@ -271,15 +276,6 @@ public strictfp class RobotPlayer {
                     if(rc.canFill(moveTarget)) rc.fill(moveTarget);
                 }
             }
-
-            // for(MapLocation corner : Utils.corners(rc.getLocation())) {
-            //     if(moveTarget.equals(corner)) {
-            //         // System.out.println("INITIAL PHASE");
-            //         if(rc.canFill(moveTarget)) rc.fill(moveTarget);
-            //     }
-            // }
-
-
 
             Pathfinding.initTurn();
             Pathfinding.move(target); 
@@ -474,22 +470,23 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void fill() throws GameActionException {
-        // if(!Utils.isEnemies()) {
-            // MapLocation target = getTarget();
-            // for(MapLocation corner : Utils.corners(rc.getLocation())) {
-            //     if(target == corner) {
-            //         if(target != null) {
-            //             System.out.println("EXTRA BYTECODE");
-            //             if(rc.canFill(target)) rc.fill(target);
-            //         }        
-            //     }
-            // }
+        Direction towards = rc.getLocation().directionTo(getTarget());
+        Direction cw = Utils.getClockwiseDirection(towards);
+        Direction ccw = Utils.getCounterClockwiseDirection(towards);
 
-            MapInfo[] mapInfo = rc.senseNearbyMapInfos();
-            for(MapInfo info : mapInfo) {
-                if(rc.canFill(info.getMapLocation())) rc.fill(info.getMapLocation());
+        MapLocation moveTarget = rc.getLocation().add(towards);
+
+        if(rc.senseMapInfo(moveTarget).isWater()) {
+            MapLocation cwTarget = rc.getLocation().add(cw);
+            MapLocation ccwTarget = rc.getLocation().add(ccw);
+            if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater()) {
+                moveTarget = cwTarget;
+            } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater()) {
+                moveTarget = ccwTarget;
             }
-        // }
+        
+            if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+        }
     }
 
     public static void heal() throws GameActionException {
