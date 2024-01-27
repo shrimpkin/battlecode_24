@@ -32,73 +32,29 @@ public class Micro {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
-    //these are constants used for controlling
-    //the attack and defense directions
-    //TODO: mess around with these 
-    //the more positive this is the more the duck will attempt to be near friends
-    static int NEAR_FRIEND_BONUS = 20;
-    // the more negative this is the more the duck will attempt to avoid enemies
-    static int NEAR_ENEMY_BONUS = -80;
-    // the more positive this is the more the duck will attempt to kill an enemy
-    static int KILL_ENEMY_BONUS = 1000;
-    // the more positivie this is the more the duck will attempt to damage an enemy
-    static int DAMAGE_ENEMY_BONUS = 200;
-    // the more negative this is the more the duck will attempt to go towards the enemies
-    static int APPROACH_ENEMY_BONUS = -50; 
-    // avoid blocking
-    static int BLOCKING_BONUS = -50;
-    // the more negative this is the more the duck will attempt to not fill in water
-    static int WATER_BONUS = -50;
-
     public Direction getOffensiveDirection() throws GameActionException{
-        Direction[] dirsToConsider = Utils.directions;
-        Direction bestDirectionSoFar = Direction.CENTER;
-        int bestScore = Integer.MIN_VALUE;
-        boolean canKill;
-        boolean canDamage;
-        for (Direction dir : dirsToConsider) {
-            MapLocation targetLocation = rc.getLocation().add(dir);
-            boolean isWater = rc.canSenseLocation(targetLocation) && rc.senseMapInfo(targetLocation).isWater();
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER) || (isWater && rc.canFill(targetLocation))) {
+        MicroInfo[] microInfo = new MicroInfo[9];
+        for(int i = 0; i < 9; i++) {
+            microInfo[i] = new MicroInfo(Utils.directions[i]);
 
-                int numEnemies = 0;
-                canKill = false;
-                canDamage = false;
-                int frie = 0;
-
-                for (RobotInfo enemy : enemies) {
-                    if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        numEnemies++;
-                        canDamage = true;
-                        if(enemy.getHealth() < rc.getAttackDamage()) {
-                            canKill = true;
-                        }
-                    }
-                }
-
-                for(RobotInfo friendly : friendlies) {
-                    if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
-                        frie++;
-                    }
-                }
-
-                int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
-                if(canKill && rc.isActionReady() && !isWater) currentScore += KILL_ENEMY_BONUS;
-                if(canDamage && rc.isActionReady() && !isWater) currentScore += DAMAGE_ENEMY_BONUS;
-
-                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
-                currentScore += frie * BLOCKING_BONUS;
-                if(isWater) currentScore += WATER_BONUS;
-
-                if(currentScore > bestScore) {
-                    bestDirectionSoFar = dir;
-                    bestScore = currentScore;
-                }
+            for(RobotInfo unit : enemies) {
+                microInfo[i].updateEnemy(unit);
             }
 
+            for(RobotInfo unit : friendlies) {
+                microInfo[i].updateAlly(unit);
+            }
         }
 
-        return bestDirectionSoFar;
+        MicroInfo best = microInfo[8];
+        for(int i = 0; i < 8; i++) {
+            if(microInfo[i].isBetterOffense(best)) {
+                best = microInfo[i];
+            }
+        }
+
+        return best.dir;
+
     }
 
     public Direction getDefensiveDirection() throws GameActionException{
@@ -159,12 +115,6 @@ public class Micro {
             alliesTargeting++;
         }
 
-        int safe() {
-            if(!canMove) return -1;
-
-            return 2;
-        }
-
         boolean canAttack() {
             if(!canMove) return false;
             return minDistanceToEnemy <= GameConstants.ATTACK_RADIUS_SQUARED;
@@ -197,7 +147,26 @@ public class Micro {
             if(willDie() && !m.willDie()) return false;
             if(!willDie() && m.willDie()) return true;
 
-            return enemiesTargeting <= m.enemiesTargeting;
+            if(enemiesTargeting < m.enemiesTargeting) return true;
+            if(enemiesTargeting > m.enemiesTargeting) return false;
+
+            return minDistanceToEnemy > m.minDistanceToEnemy;
+        }
+
+        boolean isBetterOffense(MicroInfo m) {
+            if(willDie() && !m.willDie()) return false;
+            if(!willDie() && m.willDie()) return true;
+
+            if(canKill() && !m.canKill()) return true;
+            if(!canKill() && m.canKill()) return false;
+
+            if(canAttack() && !m.canAttack()) return true;
+            if(!canAttack() && m.canAttack()) return false;
+
+            if(enemiesTargeting < m.enemiesTargeting) return true;
+            if(enemiesTargeting > m.enemiesTargeting) return false;
+
+            return minDistanceToEnemy < m.minDistanceToEnemy;
         }
     }
 }
