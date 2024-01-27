@@ -62,7 +62,9 @@ public strictfp class RobotPlayer {
                 SA.updateMap();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                dig();
+                if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
+                    dig();
+                }
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
