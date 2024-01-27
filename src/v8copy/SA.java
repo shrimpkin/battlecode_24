@@ -1,4 +1,4 @@
-package v8test;
+package v8copy;
 
 import battlecode.common.FlagInfo;
 import battlecode.common.GameActionException;
@@ -24,15 +24,14 @@ public class SA {
 
     //for the first turn the location is also used for indexing all robots
     public static int INDEXING = 7;
-
-    public static int e_loc_start = 8;
-    public static int escort = 9;
-    public static int defend = 10;
-    public static int symmetry = 11; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
-    public static int f_loc_start = 56;
+    public static int escort = 8;
+    public static int defend = 9;
+    public static int symmetry = 10; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
 
     static RobotController rc;
     
+    public static int ROBOT_COMBAT_INFO_START = 14;
+    public static int ROBOT_COMBAT_INFO_END = 64;
 
     static int width, height;
 

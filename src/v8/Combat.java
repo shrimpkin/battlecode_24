@@ -14,6 +14,7 @@ public class Combat {
     static RobotController rc;
     static int ID;
     boolean shouldRunAway;
+    static Micro micro;
 
     static int numEnemiesAttackingUs;
     static int numFriendliesHealingUs;
@@ -29,7 +30,7 @@ public class Combat {
     static MapLocation averageEnemy;
     static MapLocation averageTrap;
     static MapLocation averageNearTrap;
-
+    
     static int OUTNUMBER = 2;
     static int IS_STUCK_TURNS = 10;
 
@@ -45,9 +46,11 @@ public class Combat {
     // the more positivie this is the more the duck will attempt to damage an enemy
     static int DAMAGE_ENEMY_BONUS = 200;
     // the more negative this is the more the duck will attempt to go towards the enemies
-    static int APPROACH_ENEMY_BONUS = -10; 
+    static int APPROACH_ENEMY_BONUS = -50; 
     // avoid blocking
     static int BLOCKING_BONUS = -50;
+    // the more negative this is the more the duck will attempt to not fill in water
+    static int WATER_BONUS = -50;
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -68,6 +71,7 @@ public class Combat {
         locations = new MapLocation[2001];
         actionLog = new ActionMode[2001];
         actionLog[0] = ActionMode.NONE;
+        micro = new Micro();
     }
 
     public static void reset() throws GameActionException {
@@ -165,90 +169,6 @@ public class Combat {
             || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
     }
 
-    /**
-     * Gets the direction that has the least potential attacking enemies
-     */
-    public static Direction getDefensiveDirection() throws GameActionException {
-        Direction[] dirsToConsider = Utils.directions;
-        Direction bestDirectionSoFar = Direction.CENTER;
-        int bestScore = -60000;
-
-        for (Direction dir : dirsToConsider) {
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
-                MapLocation targetLocation = rc.getLocation().add(dir);
-                int currentScore = 0;
-                for (RobotInfo enemy : enemies) {
-                    //this checks if an enemy could attack the current robot
-                    if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        currentScore += NEAR_ENEMY_BONUS; 
-                    }
-                }
-
-                for(RobotInfo friend : friendlies) {
-                    if (targetLocation.isWithinDistanceSquared(friend.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        currentScore += NEAR_FRIEND_BONUS; 
-                    }
-                }
-
-                if (currentScore > bestScore) {
-                    bestDirectionSoFar = dir;
-                    bestScore = currentScore;
-                } 
-            }
-        }
-        indicator += "score: " + bestScore + " ";
-        return bestDirectionSoFar;
-    }
-
-    /**
-     * returns the direction that allows for hitting the lowest health enemy
-     */
-    public static Direction getOffensiveDirection() throws GameActionException {
-        Direction[] dirsToConsider = Utils.directions;
-        Direction bestDirectionSoFar = Direction.CENTER;
-        int bestScore = Integer.MIN_VALUE;
-        boolean canKill;
-        boolean canDamage;
-        for (Direction dir : dirsToConsider) {
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
-                int numEnemies = 0;
-                MapLocation targetLocation = rc.getLocation().add(dir);
-                canKill = false;
-                canDamage = false;
-                int frie = 0;
-                
-                for (RobotInfo enemy : enemies) {
-                    if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        numEnemies++;
-                        canDamage = true;
-                        if(enemy.getHealth() < rc.getAttackDamage()) {
-                            canKill = true;
-                        }
-                    }
-                }
-
-                for(RobotInfo friendly : friendlies) {
-                    if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
-                        frie++;
-                    }
-                }
-
-                int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
-                if(canKill && rc.isActionReady()) currentScore += KILL_ENEMY_BONUS;
-                if(canDamage && rc.isActionReady()) currentScore += DAMAGE_ENEMY_BONUS;
-
-                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
-                currentScore += frie * BLOCKING_BONUS;
-                if(currentScore > bestScore) {
-                    bestDirectionSoFar = dir;
-                    bestScore = currentScore;
-                }
-            }
-        }
-        indicator += "score: " + bestScore + " ";
-
-        return bestDirectionSoFar;
-    }
 
     /**
      * Makes the
@@ -268,7 +188,7 @@ public class Combat {
             }
         }
 
-        return getOffensiveDirection();
+        return micro.getOffensiveDirection();
     }
 
     /**
@@ -478,6 +398,7 @@ public class Combat {
      */
     public static void runCombat() throws GameActionException {
         Combat.reset();
+        micro.initTurn(rc);
         CombatMode mode = CombatMode.OFF;
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
@@ -489,13 +410,19 @@ public class Combat {
         switch (mode) {
             case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
             case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
-            case DEF: dir = Combat.getDefensiveDirection(); break;
-            case OFF: dir = Combat.getOffensiveDirection(); break;
+            case DEF: dir = micro.getDefensiveDirection(); break;
+            case OFF: dir = micro.getOffensiveDirection(); break;
             case NONE: break;
         }
 
         modeLog[rc.getRoundNum()] = mode;
 
+        target = rc.getLocation().add(dir);
+        if(rc.canFill(target)) {
+            indicator += "fill ";
+            rc.fill(target);
+        }
+        
         if (mode.equals(CombatMode.DEF)) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);

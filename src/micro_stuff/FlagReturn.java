@@ -1,4 +1,4 @@
-package v8test;
+package micro_stuff;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -74,6 +74,23 @@ public class FlagReturn {
                 target = spawn;
             }
         }
+        return target;
+    }
+
+    /**
+     * 
+     * @return
+     * @throws GameActionException
+     */
+    public static MapLocation escortMove() throws GameActionException {
+        MapLocation target = SA.getLocation(SA.escort);
+        Pathfinding.initTurn();
+
+        if(rc.getLocation().isAdjacentTo(target)) {
+            Direction opposite = rc.getLocation().directionTo(target).opposite();
+            target = rc.getLocation().add(opposite);
+        }
+
         return target;
     }
 }
