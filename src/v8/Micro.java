@@ -147,7 +147,10 @@ public class Micro {
             if(willDie() && !m.willDie()) return false;
             if(!willDie() && m.willDie()) return true;
 
-            return enemiesTargeting <= m.enemiesTargeting;
+            if(enemiesTargeting < m.enemiesTargeting) return true;
+            if(enemiesTargeting > m.enemiesTargeting) return false;
+
+            return minDistanceToEnemy > m.minDistanceToEnemy;
         }
 
         boolean isBetterOffense(MicroInfo m) {
@@ -159,8 +162,11 @@ public class Micro {
 
             if(canAttack() && !m.canAttack()) return true;
             if(!canAttack() && m.canAttack()) return false;
-            
-            return enemiesTargeting <= m.enemiesTargeting;
+
+            if(enemiesTargeting < m.enemiesTargeting) return true;
+            if(enemiesTargeting > m.enemiesTargeting) return false;
+
+            return minDistanceToEnemy < m.minDistanceToEnemy;
         }
     }
 }
