@@ -386,7 +386,7 @@ public class Combat {
             rc.fill(target);
         }
         
-        if (mode.equals(CombatMode.DEF)) {
+        if (micro.shouldAttackFirst) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
