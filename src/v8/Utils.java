@@ -89,4 +89,10 @@ public class Utils {
 
         return false;
     }
+
+    public static boolean isValidPosition(MapLocation loc) {
+        if (loc.y < 0 || loc.x < 0) return false;
+        if (loc.y > rc.getMapHeight() - 1 || loc.x > rc.getMapWidth() - 1) return false;
+        return true;
+    }
 }

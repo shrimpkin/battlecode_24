@@ -1,6 +1,7 @@
 package v8;
 
 import battlecode.common.*;
+import scala.Array;
 import scala.util.Random;
 
 import java.util.ArrayList;
@@ -60,6 +61,7 @@ public strictfp class RobotPlayer {
                 MapLocation init = rc.getLocation();
                 globals();
                 flagStuff();
+                digMoat();
                 move();
                 SA.updateMap();
                 heal();
@@ -392,6 +394,85 @@ public strictfp class RobotPlayer {
         return null;
     }
 
+    public static void digMoat() throws GameActionException {
+        MapLocation defendLoc = SA.getLocation(SA.defend);
+        if (defendLoc != null && Utils.isValidPosition(defendLoc)) {
+            if (rc.getLocation().distanceSquaredTo(defendLoc) > 16) {
+                // if we're too far away just return
+                return;
+            }
+
+            // We should dig
+            ArrayList<MapLocation> digSpots = new ArrayList<MapLocation>();
+            MapLocation curLoc;
+            for (Direction d: new Direction[]{
+                    Direction.NORTH,
+                    Direction.EAST,
+                    Direction.SOUTH,
+                    Direction.WEST
+            }) {
+                curLoc = rc.getLocation();
+
+                // go across d 3 times
+                for (int j = 0; j < 3; j++) {
+                    curLoc = curLoc.add(d);
+                }
+
+                // this is valid but we need to do up and down too
+                MapLocation centerCardinal = curLoc;
+                if (Utils.isValidPosition(centerCardinal)) digSpots.add(centerCardinal);
+
+                // add verticals
+                if (d == Direction.EAST || d == Direction.WEST) {
+                    MapLocation n1 = centerCardinal.add(Direction.NORTH);
+                    if (Utils.isValidPosition(n1)) digSpots.add(n1);
+                    MapLocation n2 = centerCardinal.add(Direction.NORTH).add(Direction.NORTH);
+                    if (Utils.isValidPosition(n2)) digSpots.add(n2);
+                    MapLocation s1 = centerCardinal.add(Direction.SOUTH);
+                    if (Utils.isValidPosition(s1)) digSpots.add(s1);
+                    MapLocation s2 = centerCardinal.add(Direction.SOUTH).add(Direction.SOUTH);
+                    if (Utils.isValidPosition(s2)) digSpots.add(s2);
+                }
+
+                // add verticals
+                if (d == Direction.SOUTH || d == Direction.NORTH) {
+                    MapLocation w = centerCardinal.add(Direction.WEST);
+                    if (Utils.isValidPosition(w)) digSpots.add(w);
+                    MapLocation n = centerCardinal.add(Direction.EAST);
+                    if (Utils.isValidPosition(n)) digSpots.add(n);
+                }
+            }
+
+            // if we can dig, dig
+            for (MapLocation digSpot: digSpots) {
+                if (rc.canDig(digSpot)) {
+                    rc.dig(digSpot);
+                    return;
+                }
+            }
+
+            // or move to lowest indexed non already digged one
+            MapLocation digTarget = null;
+            for (MapLocation digSpot: digSpots) {
+                if (rc.canSenseLocation(digSpot)) {
+                    if (!rc.senseMapInfo(digSpot).isWater()) {
+                        digTarget = digSpot;
+                    }
+                }
+            }
+
+            if (digTarget != null) {
+                if (digSpots.size() > 0) {
+                    digTarget = digSpots.get(0);
+                }
+            }
+
+            if (digTarget != null) {
+                Pathfinding.move(digTarget);
+            }
+        }
+    }
+
     /**
      * very niche method that handles passive defender building behavior
      * namely : tries to place stun on corners whenever possible
@@ -429,7 +510,13 @@ public strictfp class RobotPlayer {
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
+            // build a bomb on flag
+            if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+            }
+
             for (MapLocation pos : Utils.corners(rc.getLocation())) {
+                if (!Utils.isValidPosition(pos)) continue;
                 MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
                     rc.build(TrapType.STUN, pos);
