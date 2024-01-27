@@ -226,9 +226,26 @@ public strictfp class RobotPlayer {
      * Also calls a combat method if there are visible enemies
      */
     public static void move() throws GameActionException {
+        MapLocation target = null;
 
-        MapLocation target;
-        //this will be where we attempt to move
+        if (!rc.isActionReady()) {
+            // target crumbs
+            MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
+            for (MapLocation t: crumLocs) {
+                if (rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater()) {
+                    if (rc.canFill(t)) {
+                        rc.canFill(t);
+                        target = t;
+                        break;
+                    }
+                } else {
+                    target = t;
+                    break;
+                }
+            }
+        }
+
+        // this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() > 150) {
             if(ID <= 3) {
                 //adding defenses if we sense enemy robots
@@ -243,7 +260,7 @@ public strictfp class RobotPlayer {
         }
 
         indicator += "t: ";
-        target = getTarget();
+        if (target == null)  target = getTarget();
 
         boolean hasFlag = rc.hasFlag();
         if(target != null) { // have a target to move to
@@ -366,8 +383,8 @@ public strictfp class RobotPlayer {
 
         // Target crumbs if nearby
         // This covers the case crumbs are revealed after wall fall
-        MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
-        if(crumLocs.length > 0) return crumLocs[0];
+        //MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
+        //if(crumLocs.length > 0) return crumLocs[0];
 
         //Grabs crumbs if we have no other goals in life
         if(rc.getRoundNum() < 200) {
@@ -505,7 +522,9 @@ public strictfp class RobotPlayer {
         if(Utils.isNearOurFlag(36)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
-                if(rc.canDig(target)) rc.dig(target);
+                if(rc.canDig(target)) {
+                    if (rc.canSenseLocation(target) && rc.senseMapInfo(target).getCrumbs() == 0)  rc.dig(target);
+                }
             }
         }
     }
