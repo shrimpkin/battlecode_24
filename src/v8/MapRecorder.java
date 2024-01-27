@@ -1,4 +1,4 @@
-package v8copy;
+package v8;
 
 import battlecode.common.Clock;
 import battlecode.common.GameActionException;

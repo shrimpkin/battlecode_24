@@ -1,4 +1,4 @@
-package v8;
+package micro_stuff;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
