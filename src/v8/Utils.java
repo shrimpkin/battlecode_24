@@ -90,11 +90,42 @@ public class Utils {
         return false;
     }
 
-    public static boolean isNearFlag(int squaredRadius) throws GameActionException {
-        MapLocation flag1Loc = SA.getLocation(SA.FLAG1);
-        MapLocation flag2Loc = SA.getLocation(SA.FLAG2);
-        MapLocation flag3Loc = SA.getLocation(SA.FLAG3);
+    public static Direction getClockwiseDirection(Direction dir) throws GameActionException {
+        int index = java.util.Arrays.asList(directions).indexOf(dir);
+        return directions[(index + 1) % 8];
+    }
 
-        
+    public static Direction getCounterClockwiseDirection(Direction dir) throws GameActionException {
+        int index = java.util.Arrays.asList(directions).indexOf(dir);
+        return directions[(index + 7) % 8];
+    }
+
+    public static boolean isValidMapLocation(MapLocation loc) throws GameActionException {
+        if(0 <= loc.x && loc.x < rc.getMapWidth()) {
+            if(0 <= loc.y && loc.y < rc.getMapHeight()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isNearFlag(int squaredRadius) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        for (int flag: new int[]{SA.FLAG1, SA.FLAG2, SA.FLAG3}) {
+            MapLocation flagLoc = SA.getLocation(flag);
+            if (isValidMapLocation(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+                return true;
+            }
+        }
+
+        // otherwise if we dont have resort to the broadcast location
+        MapLocation[] broadcastedFlags = rc.senseBroadcastFlagLocations();
+        for (MapLocation flag: broadcastedFlags) {
+            if (curLoc.distanceSquaredTo(flag) < squaredRadius) {
+                return true;
+            }
+        }
+       
+        return false;
     }
 }
