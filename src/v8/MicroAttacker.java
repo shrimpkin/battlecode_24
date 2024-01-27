@@ -31,8 +31,6 @@ public class MicroAttacker {
     static double currentActionRadius;
     static boolean canAttack;
 
-    final static int MAX_RUBBLE_DIFF = 5;
-
     static final Direction[] dirs = {
         Direction.NORTH,
         Direction.NORTHEAST,
@@ -110,8 +108,8 @@ public class MicroAttacker {
     
                 if (!hurt){
                     try{
-                        this.DPSreceived -= myDPS/(10);
-                        this.alliesTargeting += myDPS/(10);
+                        this.DPSreceived -= myDPS;
+                        this.alliesTargeting += myDPS;
                     } catch (Exception e){
                         e.printStackTrace();
                     }
