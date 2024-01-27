@@ -70,10 +70,10 @@ public strictfp class RobotPlayer {
                 MapLocation result = rc.getLocation();
                 if (!init.equals(result)) MapRecorder.updateSurroundings();
             }
-            for (int i = 0; i < 3; i++){
-                if (rc.readSharedArray(i) != 0)
-                    rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
-            }
+            // for (int i = 0; i < 3; i++){
+            //     if (rc.readSharedArray(i) != 0)
+            //         rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
+            // }
 
             rc.setIndicatorString(indicator);
             Clock.yield();
@@ -379,8 +379,8 @@ public strictfp class RobotPlayer {
                     explorationTarget = genExploreTarget(10);
                     lastChangeTurn = rc.getRoundNum();
                 }
-                if (explorationTarget != null)
-                    rc.setIndicatorDot(explorationTarget, 255, 0, 0);
+                // if (explorationTarget != null)
+                //     rc.setIndicatorDot(explorationTarget, 255, 0, 0);
                 target = explorationTarget;
             }
             return target;
