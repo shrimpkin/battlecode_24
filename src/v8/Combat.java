@@ -136,7 +136,7 @@ public class Combat {
             || (numFriendlies < numEnemies) 
             || (rc.getHealth() < 400);
     }
-    
+
     /**
      * Makes the
      *
@@ -197,7 +197,7 @@ public class Combat {
                 numShooting++;
             }
         }
-        if (numShooting > 2) return false;
+        if (numShooting * 150 > rc.getHealth()) return false;
 
         return true;
     }
@@ -312,11 +312,7 @@ public class Combat {
         } else {            
             best = TrapType.STUN;
         }
-        if(rc.getRoundNum() == 208) {
-            best = TrapType.EXPLOSIVE;
-        }
-
-
+        
         MapLocation buildTarget = buildTarget(best);
         boolean buildInSpawn = false;
         for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
