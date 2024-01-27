@@ -109,11 +109,13 @@ public class Utils {
         return false;
     }
 
-    public static boolean isNearFlag(int squaredRadius) throws GameActionException {
+    public static boolean isNearEnemyFlag(int squaredRadius) throws GameActionException {
         MapLocation curLoc = rc.getLocation();
-        for (int flag: new int[]{SA.FLAG1, SA.FLAG2, SA.FLAG3}) {
+        for (int flag: new int[]{SA.ENEMY_FLAG1, SA.ENEMY_FLAG2, SA.ENEMY_FLAG3, SA.TARGET_ENEMY_FLAG}) {
             MapLocation flagLoc = SA.getLocation(flag);
-            if (isValidMapLocation(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+            int prefix = SA.getPrefix(flag);
+
+            if (prefix == 1 && isValidMapLocation(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
                 return true;
             }
         }
@@ -126,6 +128,18 @@ public class Utils {
             }
         }
        
+        return false;
+    }
+
+    public static boolean isNearOurFlag(int squaredRadius) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        for (int flag: new int[]{SA.FLAG1, SA.FLAG2, SA.FLAG3}) {
+            MapLocation flagLoc = SA.getLocation(flag);
+            if (isValidMapLocation(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+                return true;
+            }
+        }
+
         return false;
     }
 }
