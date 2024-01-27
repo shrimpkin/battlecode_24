@@ -61,6 +61,7 @@ public strictfp class RobotPlayer {
                 move();
                 SA.updateMap();
                 heal();
+                stunAroundSpawn();
                 defenderBuild(); // probably a better place to put this :/
                 if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
                     dig();
@@ -488,6 +489,15 @@ public strictfp class RobotPlayer {
         }
     }
 
+    public static void stunAroundSpawn() throws GameActionException {
+        if(Utils.isNearOurFlag(25)) {
+            MapLocation target = rc.getLocation().add(Direction.NORTH);
+            if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
+                if(rc.canBuild(TrapType.STUN, target)) { rc.build(TrapType.STUN, target); }
+            }
+        }
+    }
+
     /**
      * Attempts to buy global upgrades
      * Buys action then healing then capturing
@@ -525,7 +535,7 @@ public strictfp class RobotPlayer {
     public static void dig() throws GameActionException {
         if(Utils.isNearOurFlag(36)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
-            if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
+            if(target.x % 2 == target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canDig(target)) {
                     if (rc.canSenseLocation(target) && rc.senseMapInfo(target).getCrumbs() == 0)  rc.dig(target);
                 }
