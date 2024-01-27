@@ -1,6 +1,7 @@
 package v8;
 
 import battlecode.common.*;
+import battlecode.world.Flag;
 import scala.util.Random;
 
 import java.util.ArrayList;
@@ -338,10 +339,9 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
-                && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
+        if(SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
                 && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
-            target = SA.getLocation(SA.escort);
+            target = FlagReturn.escortMove();
             rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
@@ -372,6 +372,9 @@ public strictfp class RobotPlayer {
         
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        if(target.equals(new MapLocation(0,0))) {
+            target = SA.getLocation(SA.escort);
+        } 
         if(target.equals(new MapLocation(0,0))) {
             target = new MapLocation(rc.getMapWidth()/ 2, rc.getMapHeight() / 2);
         }
