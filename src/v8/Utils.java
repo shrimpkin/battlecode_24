@@ -108,4 +108,24 @@ public class Utils {
         }
         return false;
     }
+
+    public static boolean isNearFlag(int squaredRadius) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        for (int flag: new int[]{SA.FLAG1, SA.FLAG2, SA.FLAG3}) {
+            MapLocation flagLoc = SA.getLocation(flag);
+            if (isValidMapLocation(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+                return true;
+            }
+        }
+
+        // otherwise if we dont have resort to the broadcast location
+        MapLocation[] broadcastedFlags = rc.senseBroadcastFlagLocations();
+        for (MapLocation flag: broadcastedFlags) {
+            if (curLoc.distanceSquaredTo(flag) < squaredRadius) {
+                return true;
+            }
+        }
+       
+        return false;
+    }
 }
