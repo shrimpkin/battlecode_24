@@ -89,7 +89,6 @@ public class Micro {
         Direction dir;
         MapLocation location;
         int minDistanceToEnemy = Integer.MAX_VALUE;
-        double DPSreceived = 0;
         double enemiesTargeting = 0;
         double alliesTargeting = 0;
         boolean canMove = true;
@@ -100,7 +99,6 @@ public class Micro {
             this.dir = dir;
             this.location = rc.getLocation().add(dir);
             if(!dir.equals(Direction.CENTER) && !rc.canMove(dir)) canMove = false;
-            this.DPSreceived -= DPS;
             alliesTargeting++;
             canAttack = rc.isActionReady();
         }
@@ -109,7 +107,6 @@ public class Micro {
             if(!canMove) return;
             int dist = unit.getLocation().distanceSquaredTo(location);
             if(dist < minDistanceToEnemy) minDistanceToEnemy = dist;
-            if(dist <= GameConstants.ATTACK_RADIUS_SQUARED) DPSreceived += DPS;
             if(dist <= GameConstants.ATTACK_RADIUS_SQUARED) enemiesTargeting++;
             if(dist <= GameConstants.ATTACK_RADIUS_SQUARED
                 && unit.getHealth() < minHealth) minHealth = unit.getHealth();
@@ -122,6 +119,8 @@ public class Micro {
 
         boolean canAttack() {
             if(!canMove) return false;
+            if(!canAttack) return false;
+
             return minDistanceToEnemy <= GameConstants.ATTACK_RADIUS_SQUARED;
         }
 
@@ -144,6 +143,9 @@ public class Micro {
 
             if(canAttack() && !m.canAttack()) return true;
             if(!canAttack() && m.canAttack()) return false;
+
+            if(minHealth < m.minHealth) return true;
+            if(minHealth > m.minHealth) return false;
 
             return true;
         }
