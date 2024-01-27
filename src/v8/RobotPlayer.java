@@ -269,9 +269,9 @@ public strictfp class RobotPlayer {
             if(rc.senseMapInfo(moveTarget).isWater()) {
                 MapLocation cwTarget = rc.getLocation().add(cw);
                 MapLocation ccwTarget = rc.getLocation().add(ccw);
-                if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater()) {
+                if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater() && rc.canMove(cw)) {
                     target = cwTarget;
-                } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater()) {
+                } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater() && rc.canMove(ccw)) {
                     target = ccwTarget;
                 } else {
                     if(rc.canFill(moveTarget)) rc.fill(moveTarget);
