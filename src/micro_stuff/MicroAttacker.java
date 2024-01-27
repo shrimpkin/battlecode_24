@@ -1,4 +1,4 @@
-package v8;
+package micro_stuff;
 
 import battlecode.common.*;
 
@@ -9,26 +9,19 @@ public class MicroAttacker {
     boolean shouldPlaySafe = false;
     boolean alwaysInRange = false;
     boolean hurt = false; 
-    static int myRange;
     static int myVisionRange;
     static double myDPS;
     boolean severelyHurt = false;
 
-    double[] DPS = new double[]{0, 0, 0, 0, 0, 0, 0};
-    int[] rangeExtended = new int[]{0, 0, 0, 0, 0, 0, 0};
-
     MicroAttacker(RobotController r){
         rc = r;
-        myRange = GameConstants.ATTACK_RADIUS_SQUARED;
         myVisionRange = GameConstants.VISION_RADIUS_SQUARED;
 
-        DPS[0] = 150;
         myDPS = rc.getAttackDamage();
     }
 
     final static double currentDPS = 150;
-    static double currentRangeExtended;
-    static double currentActionRadius;
+    static int ACTION_RADIUS = GameConstants.ATTACK_RADIUS_SQUARED;
     static boolean canAttack;
 
     static final Direction[] dirs = {
@@ -60,13 +53,7 @@ public class MicroAttacker {
         MicroInfo[] microInfo = new MicroInfo[9];
         for(int i = 0; i < 9; ++i) microInfo[i] = new MicroInfo(dirs[i]);
 
-        for(int i = 0; i < 9; i++) {
-            if(!rc.canMove(dirs[i])) microInfo[i].canMove = false;
-        }
-
-        for(RobotInfo unit : units) {
-            currentRangeExtended = rangeExtended[0];
-            
+        for(RobotInfo unit : units) {            
             for(int i = 0; i < 9; i++) {
                 microInfo[i].updateEnemy(unit);
             }
@@ -100,21 +87,18 @@ public class MicroAttacker {
         double alliesTargeting = 0;
         boolean canMove = true;
 
-        public MicroInfo(Direction dir){
+        public MicroInfo(Direction dir) throws GameActionException{
             this.dir = dir;
             this.location = rc.getLocation().add(dir);
             if (dir != Direction.CENTER && !rc.canMove(dir)) canMove = false;
             else{
-    
                 if (!hurt){
-                    try{
-                        this.DPSreceived -= myDPS;
-                        this.alliesTargeting += myDPS;
-                    } catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    minDistanceToEnemy = rangeExtended[0];
-                } else minDistanceToEnemy = Integer.MAX_VALUE;
+                    this.DPSreceived -= myDPS;
+                    this.alliesTargeting += myDPS;
+                    minDistanceToEnemy = ACTION_RADIUS;
+                } else {
+                    minDistanceToEnemy = Integer.MAX_VALUE;
+                }
             }
         }
 
@@ -122,8 +106,8 @@ public class MicroAttacker {
             if (!canMove) return;
             int dist = unit.getLocation().distanceSquaredTo(location);
             if (dist < minDistanceToEnemy)  minDistanceToEnemy = dist;
-            if (dist <= currentActionRadius) DPSreceived += currentDPS;
-            if (dist <= currentRangeExtended) enemiesTargeting += currentDPS;
+            if (dist <= ACTION_RADIUS) DPSreceived += currentDPS;
+            if (dist <= ACTION_RADIUS) enemiesTargeting += currentDPS;
         }
 
         void updateAlly(RobotInfo unit){
@@ -140,7 +124,7 @@ public class MicroAttacker {
 
         boolean inRange(){
             if (alwaysInRange) return true;
-            return minDistanceToEnemy <= myRange;
+            return minDistanceToEnemy <= ACTION_RADIUS;
         }
 
         //equal => true

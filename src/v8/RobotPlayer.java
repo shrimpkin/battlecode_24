@@ -1,7 +1,9 @@
-package v8;
+package v8copy;
 
 import battlecode.common.*;
 import scala.util.Random;
+
+import java.util.ArrayList;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -88,7 +90,6 @@ public strictfp class RobotPlayer {
         Utils.init(rc);
         FlagReturn.init(rc);
         MapRecorder.init(rc);
-        
 
         //assigning each duck an ID that is based off of when they move 
         //in a turn
@@ -337,9 +338,10 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
+                && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
                 && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
-            target = FlagReturn.escortMove();
+            target = SA.getLocation(SA.escort);
             rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
@@ -370,9 +372,6 @@ public strictfp class RobotPlayer {
         
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
-        if(target.equals(new MapLocation(0,0))) {
-            target = SA.getLocation(SA.escort);
-        } 
         if(target.equals(new MapLocation(0,0))) {
             target = new MapLocation(rc.getMapWidth()/ 2, rc.getMapHeight() / 2);
         }
@@ -430,29 +429,12 @@ public strictfp class RobotPlayer {
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 100) return; // can't build: on cool-down / no money
         // passive defense - put stun trap on corners to buy time
         if (rc.getLocation().equals(getFlagDefense())) { // on flag, passive defense
-            MapLocation[] stunTrapLocations = {rc.getLocation().add(Direction.NORTHWEST), rc.getLocation().add(Direction.SOUTHEAST)};
-            MapLocation[] waterTrapLocations = {rc.getLocation().add(Direction.NORTHEAST), rc.getLocation().add(Direction.SOUTHWEST)};
-
-            for (MapLocation pos : waterTrapLocations) {
+            for (MapLocation pos : Utils.corners(rc.getLocation())) {
                 MapInfo pinfo = rc.senseMapInfo(pos);
-                if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.WATER, pos)){
-                    rc.build(TrapType.WATER, pos);
-                    return;
-                }
-            }
-
-            for (MapLocation pos : stunTrapLocations) {
-            MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
                     rc.build(TrapType.STUN, pos);
                     return;
                 }
-            }
-
-        
-            if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                // build a bomb on flag
-                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         }
     }

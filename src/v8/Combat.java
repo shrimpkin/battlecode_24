@@ -491,33 +491,30 @@ public class Combat {
         else if (shouldRunAway()) mode = CombatMode.DEF;
 
         Direction dir = Direction.CENTER;
-        MicroAttacker micro = new MicroAttacker(rc);
-        micro.doMicro();
-        attack();
 
-        // switch (mode) {
-        //     case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
-        //     case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
-        //     case DEF: dir = Combat.getDefensiveDirection(); break;
-        //     case OFF: dir = Combat.getOffensiveDirection(); break;
-        //     case NONE: break;
-        // }
+        switch (mode) {
+            case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
+            case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
+            case DEF: dir = Combat.getDefensiveDirection(); break;
+            case OFF: dir = Combat.getOffensiveDirection(); break;
+            case NONE: break;
+        }
 
-        // modeLog[rc.getRoundNum()] = mode;
+        modeLog[rc.getRoundNum()] = mode;
 
-        // target = rc.getLocation().add(dir);
-        // if(rc.canFill(target)) {
-        //     indicator += "fill ";
-        //     rc.fill(target);
-        // }
+        target = rc.getLocation().add(dir);
+        if(rc.canFill(target)) {
+            indicator += "fill ";
+            rc.fill(target);
+        }
         
-        // if (mode.equals(CombatMode.DEF)) {
-        //     Combat.attack();
-        //     if (rc.canMove(dir)) rc.move(dir);
-        // } else {
-        //     if (rc.canMove(dir)) rc.move(dir);
-        //     Combat.attack();
-        // }
+        if (mode.equals(CombatMode.DEF)) {
+            Combat.attack();
+            if (rc.canMove(dir)) rc.move(dir);
+        } else {
+            if (rc.canMove(dir)) rc.move(dir);
+            Combat.attack();
+        }
 
         indicator += "mode: " + mode + " ";
         if (shouldBuild()) build();
