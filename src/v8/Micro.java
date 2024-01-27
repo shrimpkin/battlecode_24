@@ -53,6 +53,8 @@ public class Micro {
             }
         }
 
+        shouldAttackFirst = !best.isBetterAttack(microInfo[8]);
+
         return best.dir;
 
     }
@@ -77,6 +79,8 @@ public class Micro {
                 best = microInfo[i];
             }
         }
+
+        shouldAttackFirst = !best.isBetterAttack(microInfo[8]);
 
         return best.dir;
     }

@@ -36,21 +36,6 @@ public class Combat {
 
     //these are constants used for controlling
     //the attack and defense directions
-    //TODO: mess around with these 
-    //the more positive this is the more the duck will attempt to be near friends
-    static int NEAR_FRIEND_BONUS = 20;
-    // the more negative this is the more the duck will attempt to avoid enemies
-    static int NEAR_ENEMY_BONUS = -80;
-    // the more positive this is the more the duck will attempt to kill an enemy
-    static int KILL_ENEMY_BONUS = 1000;
-    // the more positivie this is the more the duck will attempt to damage an enemy
-    static int DAMAGE_ENEMY_BONUS = 200;
-    // the more negative this is the more the duck will attempt to go towards the enemies
-    static int APPROACH_ENEMY_BONUS = -50; 
-    // avoid blocking
-    static int BLOCKING_BONUS = -50;
-    // the more negative this is the more the duck will attempt to not fill in water
-    static int WATER_BONUS = -50;
 
     enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
 
@@ -142,33 +127,15 @@ public class Combat {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
-    
-    /**
-     * @return true if the robot has been in combat for the last three rounds
-     *          and has not done anything during those three rounds
-     */
-    public static boolean isUseless() throws GameActionException {
-        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
-            int index = rc.getRoundNum() - i;
-
-            if(index < 0) return false;
-            if(locations[index] == null) return false;
-            if(!locations[index].equals(rc.getLocation())) return false;
-            if(!actionLog[index].equals(ActionMode.NONE)) return false;
-        }
-
-        return true;
-    }
 
     /**
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  > 0 
+        return numEnemiesAttackingUs  > 1 
             || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
+            || (rc.getHealth() < 400);
     }
-
 
     /**
      * Makes the
@@ -230,7 +197,7 @@ public class Combat {
                 numShooting++;
             }
         }
-        if (numShooting > 2) return false;
+        if (numShooting * 150 > rc.getHealth()) return false;
 
         return true;
     }
@@ -345,11 +312,7 @@ public class Combat {
         } else {            
             best = TrapType.STUN;
         }
-        if(rc.getRoundNum() == 208) {
-            best = TrapType.EXPLOSIVE;
-        }
-
-
+        
         MapLocation buildTarget = buildTarget(best);
         boolean buildInSpawn = false;
         for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
@@ -423,7 +386,7 @@ public class Combat {
             rc.fill(target);
         }
         
-        if (mode.equals(CombatMode.DEF)) {
+        if (micro.shouldAttackFirst) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
