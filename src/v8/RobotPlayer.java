@@ -64,6 +64,7 @@ public strictfp class RobotPlayer {
                 SA.updateMap();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
+                dig();
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
@@ -261,7 +262,7 @@ public strictfp class RobotPlayer {
             MapLocation moveTarget = rc.getLocation().add(towards);
             
 
-            if(Utils.isNearFlag(-1)) {
+            if(Utils.isNearEnemyFlag(25)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
 
             } else 
@@ -486,6 +487,15 @@ public strictfp class RobotPlayer {
             }
         
             if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+        }
+    }
+
+    public static void dig() throws GameActionException {
+        if(Utils.isNearOurFlag(36)) {
+            MapLocation target = rc.getLocation().add(Direction.NORTH);
+            if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
+                if(rc.canDig(target)) rc.dig(target);
+            }
         }
     }
 
