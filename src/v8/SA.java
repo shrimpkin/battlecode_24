@@ -27,10 +27,12 @@ public class SA {
     public static int escort = 8;
     public static int defend = 9;
     public static int symmetry = 10; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
+    public static int escortDir = 11;
 
     static RobotController rc;
     
     public static int ROBOT_COMBAT_INFO_START = 14;
+
     public static int ROBOT_COMBAT_INFO_END = 64;
 
     static int width, height;

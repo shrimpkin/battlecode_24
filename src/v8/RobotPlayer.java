@@ -1,9 +1,7 @@
 package v8;
 
 import battlecode.common.*;
-import scala.util.Random;
-
-import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -372,11 +370,15 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
+        if(
+                rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 10           //is near flag carrier
                 && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
-                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
+                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))
+        ) {   //makes sure we have a real target
             target = SA.getLocation(SA.escort);
-            rc.writeSharedArray(SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1));
+            rc.writeSharedArray(
+                    SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1)
+            );
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         }
