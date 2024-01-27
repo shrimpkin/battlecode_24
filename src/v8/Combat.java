@@ -291,7 +291,7 @@ public class Combat {
     public static boolean shouldDefendFlag() throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
         if (flags.length == 0) return false;
-
+    
         MapLocation flagLocation = flags[0].getLocation();
 
         for (RobotInfo enemy : enemies) {

@@ -1,6 +1,8 @@
 package v8;
 
 import battlecode.common.*;
+import battlecode.server.GameInfo;
+import battlecode.world.GameWorld;
 import scala.util.Random;
 
 import java.util.ArrayList;
@@ -325,7 +327,12 @@ public strictfp class RobotPlayer {
                 rc.writeSharedArray(SA.defend, 0);
             }
 
-            return target;
+            // if we're at target but we don't sense flag lets not defend it
+            if (
+                    !(rc.getLocation().equals(target) && rc.senseNearbyFlags(4, rc.getTeam()).length > 0)
+            ) {
+                return target;
+            }
         }
 
         // Sends robots to defend 
