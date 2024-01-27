@@ -89,4 +89,12 @@ public class Utils {
 
         return false;
     }
+
+    public static boolean isNearFlag(int squaredRadius) throws GameActionException {
+        MapLocation flag1Loc = SA.getLocation(SA.FLAG1);
+        MapLocation flag2Loc = SA.getLocation(SA.FLAG2);
+        MapLocation flag3Loc = SA.getLocation(SA.FLAG3);
+
+        
+    }
 }
