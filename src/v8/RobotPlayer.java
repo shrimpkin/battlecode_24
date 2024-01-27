@@ -1,10 +1,7 @@
 package v8;
 
 import battlecode.common.*;
-import battlecode.world.Flag;
 import scala.util.Random;
-
-import java.util.ArrayList;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -91,6 +88,7 @@ public strictfp class RobotPlayer {
         Utils.init(rc);
         FlagReturn.init(rc);
         MapRecorder.init(rc);
+        
 
         //assigning each duck an ID that is based off of when they move 
         //in a turn
