@@ -290,7 +290,21 @@ public class Combat {
     public static void build() throws GameActionException {
         MapLocation buildTarget = buildTarget(TrapType.STUN);
         boolean canBuildTrap = rc.canBuild(TrapType.STUN, buildTarget);
-        if(canBuildTrap) {
+
+        MapLocation curLoc = buildTarget;
+        boolean adajcentToTrap = false;
+        for (Direction d: new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+            MapLocation adjacent = curLoc.add(d);
+            if (rc.canSenseLocation(adjacent)) {
+                MapInfo spot = rc.senseMapInfo(adjacent);
+                if (spot.getTrapType() == TrapType.STUN) {
+                    adajcentToTrap = true;
+                    break;
+                }
+            }
+        }
+
+        if(canBuildTrap && !adajcentToTrap) {
             rc.build(TrapType.STUN, buildTarget);
         }    
     }
