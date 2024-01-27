@@ -444,11 +444,17 @@ public strictfp class RobotPlayer {
             }
 
             for (MapLocation pos : stunTrapLocations) {
-                MapInfo pinfo = rc.senseMapInfo(pos);
+            MapInfo pinfo = rc.senseMapInfo(pos);
                 if (pinfo.getTrapType() == TrapType.NONE && rc.canBuild(TrapType.STUN, pos)){
                     rc.build(TrapType.STUN, pos);
                     return;
                 }
+            }
+
+        
+            if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                // build a bomb on flag
+                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         }
     }
