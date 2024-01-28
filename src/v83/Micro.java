@@ -1,4 +1,4 @@
-package v8;
+package v83;
 
 import battlecode.common.*;
 
