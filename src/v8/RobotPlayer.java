@@ -490,7 +490,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void stunAroundSpawn() throws GameActionException {
-        if(Utils.isNearOurFlag(25)) {
+        if(Utils.isNearOurFlag(6)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canBuild(TrapType.STUN, target)) { rc.build(TrapType.STUN, target); }
