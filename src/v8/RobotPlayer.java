@@ -272,7 +272,7 @@ public strictfp class RobotPlayer {
             MapLocation moveTarget = rc.getLocation().add(towards);
             
 
-            if(Utils.isNearEnemyFlag(25)) {
+            if(Utils.isNearEnemyFlag(5)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
 
             } else 
