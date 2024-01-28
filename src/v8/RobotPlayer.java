@@ -363,7 +363,7 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 9           //is near flag carrier
                 && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
                 && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
             target = FlagReturn.getEscortDirection();

@@ -79,9 +79,13 @@ public class FlagReturn {
 
     public static MapLocation getEscortDirection() throws GameActionException {
         MapLocation target = SA.getLocation(SA.escort);
-    
-        if(rc.getLocation().distanceSquaredTo(target) <= 1) {
-            return rc.getLocation().add(rc.getLocation().directionTo(target).opposite());
+        MapLocation flagBearer = SA.getLocation(SA.escort);
+
+        Direction toFlagBearer = flagBearer.directionTo(rc.getLocation());
+        Direction toHome = rc.getLocation().directionTo(getReturnTarget());
+
+        if(rc.getLocation().distanceSquaredTo(target) <= 1 && toFlagBearer.equals(toHome)) {
+            return rc.getLocation().add(toFlagBearer.opposite());
         }
 
         return target;
