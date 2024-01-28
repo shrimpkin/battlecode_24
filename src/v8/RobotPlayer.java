@@ -63,7 +63,7 @@ public strictfp class RobotPlayer {
                 Combat.attack();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                if(rc.getRoundNum() <= 150 || rc.getCrumbs() >= 400) {
+                if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
                     dig();
                 }
                 if(rc.getRoundNum() >= 230) {
@@ -520,10 +520,21 @@ public strictfp class RobotPlayer {
     }
 
     public static void stunAroundSpawn() throws GameActionException {
-        if(Utils.isNearOurFlag(16)) {
+        if(Utils.isNearOurFlag(9)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
-                if(rc.canBuild(TrapType.STUN, target)) { rc.build(TrapType.STUN, target); }
+                if(rc.canBuild(TrapType.STUN, target)) {
+                    // check adjacent
+                    boolean adjacentToTrap = false;
+                    /*for (Direction d: new Direction[]{Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST}) {
+                        MapLocation trapLoc = target.add(d);
+                        if (Utils.isValidMapLocation(trapLoc) && rc.canSenseLocation(trapLoc) && rc.senseMapInfo(trapLoc).getTrapType() == TrapType.STUN) {
+                            adjacentToTrap = true;
+                        }
+                    }*/
+
+                    if (!adjacentToTrap) rc.build(TrapType.STUN, target);
+                }
             }
         }
     }
