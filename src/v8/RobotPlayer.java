@@ -226,13 +226,15 @@ public strictfp class RobotPlayer {
     public static void move() throws GameActionException {
         MapLocation target = null;
 
-        if (!rc.isActionReady()) {
-            MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
-            for (MapLocation t: crumLocs) {
-                if (!(rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater())) {
-                    target = t;
-                    break;
-                }
+        MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
+        for (MapLocation t: crumLocs) {
+            if (!(rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater())) {
+                target = t;
+                break;
+            } else {
+                if (rc.canFill(t)) rc.fill(t);
+                target = t;
+                break;
             }
         }
 
