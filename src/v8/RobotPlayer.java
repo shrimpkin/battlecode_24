@@ -282,7 +282,7 @@ public strictfp class RobotPlayer {
             Direction ccw = Utils.getCounterClockwiseDirection(towards);
             MapLocation moveTarget = rc.getLocation().add(towards);
 
-            if(Utils.isNearEnemyFlag(5)) {
+            if(Utils.isNearEnemyFlag(25)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
             } else 
             if(Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
@@ -549,7 +549,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void dig() throws GameActionException {
-        if(Utils.isNearOurFlag(36)) {
+        if(Utils.isNearOurFlag(6)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canDig(target)) {
