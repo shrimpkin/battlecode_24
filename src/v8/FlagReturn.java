@@ -76,4 +76,14 @@ public class FlagReturn {
         }
         return target;
     }
+
+    public static MapLocation getEscortDirection() throws GameActionException {
+        MapLocation target = SA.getLocation(SA.escort);
+    
+        if(rc.getLocation().distanceSquaredTo(target) <= 1) {
+            return rc.getLocation().add(rc.getLocation().directionTo(target).opposite());
+        }
+
+        return target;
+    }
 }
