@@ -62,9 +62,13 @@ public strictfp class RobotPlayer {
                 SA.updateMap();
                 Combat.attack();
                 heal();
-                stunAroundSpawn();
                 defenderBuild(); // probably a better place to put this :/
-                dig();
+                if(rc.getRoundNum() <= 150 || rc.getCrumbs() >= 400) {
+                    dig();
+                }
+                if(rc.getRoundNum() >= 230) {
+                    stunAroundSpawn();
+                }
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
@@ -516,7 +520,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void stunAroundSpawn() throws GameActionException {
-        if(Utils.isNearOurFlag(6)) {
+        if(Utils.isNearOurFlag(16)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canBuild(TrapType.STUN, target)) { rc.build(TrapType.STUN, target); }
@@ -559,7 +563,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void dig() throws GameActionException {
-        if(Utils.isNearOurFlag(6)) {
+        if(Utils.isNearOurFlag(16)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
             if(target.x % 2 == target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canDig(target)) {
