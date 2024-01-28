@@ -63,7 +63,12 @@ public strictfp class RobotPlayer {
                 Combat.attack();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                dig();
+                if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
+                    dig();
+                }
+                if(rc.getRoundNum() >= 230) {
+                    stunAroundSpawn();
+                }
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
@@ -282,7 +287,7 @@ public strictfp class RobotPlayer {
             Direction ccw = Utils.getCounterClockwiseDirection(towards);
             MapLocation moveTarget = rc.getLocation().add(towards);
 
-            if(Utils.isNearEnemyFlag(5)) {
+            if(Utils.isNearEnemyFlag(25)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
             } else 
             if(Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
@@ -515,6 +520,26 @@ public strictfp class RobotPlayer {
         }
     }
 
+    public static void stunAroundSpawn() throws GameActionException {
+        if(Utils.isNearOurFlag(9)) {
+            MapLocation target = rc.getLocation().add(Direction.NORTH);
+            if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
+                if(rc.canBuild(TrapType.STUN, target)) {
+                    // check adjacent
+                    boolean adjacentToTrap = false;
+                    /*for (Direction d: new Direction[]{Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST}) {
+                        MapLocation trapLoc = target.add(d);
+                        if (Utils.isValidMapLocation(trapLoc) && rc.canSenseLocation(trapLoc) && rc.senseMapInfo(trapLoc).getTrapType() == TrapType.STUN) {
+                            adjacentToTrap = true;
+                        }
+                    }*/
+
+                    if (!adjacentToTrap) rc.build(TrapType.STUN, target);
+                }
+            }
+        }
+    }
+
     /**
      * Attempts to buy global upgrades
      * Buys action then healing then capturing
@@ -552,9 +577,9 @@ public strictfp class RobotPlayer {
     }
 
     public static void dig() throws GameActionException {
-        if(Utils.isNearOurFlag(36)) {
+        if(Utils.isNearOurFlag(16)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
-            if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
+            if(target.x % 2 == target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canDig(target)) {
                     if (rc.canSenseLocation(target) && rc.senseMapInfo(target).getCrumbs() == 0)  rc.dig(target);
                 }
