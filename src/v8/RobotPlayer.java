@@ -1,7 +1,9 @@
 package v8;
 
 import battlecode.common.*;
-import java.util.Random;
+import scala.util.Random;
+
+import java.util.ArrayList;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -55,21 +57,17 @@ public strictfp class RobotPlayer {
 
             //actions to perform if we are spawned in, or just got spawned in
             if(rc.isSpawned()) {
-                MapLocation init = rc.getLocation();
                 globals();
                 flagStuff();
                 move();
+                MapRecorder.updateSurroundings();
                 SA.updateMap();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
-                    dig();
-                }
+                dig();
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
-                MapLocation result = rc.getLocation();
-                if (!init.equals(result)) MapRecorder.updateSurroundings();
             }
             // for (int i = 0; i < 3; i++){
             //     if (rc.readSharedArray(i) != 0)
@@ -372,15 +370,17 @@ public strictfp class RobotPlayer {
         }
 
         //Escorts a robot with a flag 
-        if(
-                rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 10           //is near flag carrier
+        if(rc.getLocation().distanceSquaredTo(SA.getLocation(SA.escort)) <= 6           //is near flag carrier
                 && SA.getPrefix(SA.escort) <= NUM_ROBOTS_TO_ESCORT                      //not too many already escorting
-                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))
-        ) {   //makes sure we have a real target
-            target = SA.getLocation(SA.escort);
-            rc.writeSharedArray(
-                    SA.escort, SA.encode(target, SA.getPrefix(SA.escort) + 1)
-            );
+                && !SA.getLocation(SA.escort).equals(new MapLocation(0,0))) {   //makes sure we have a real target
+            target = FlagReturn.getEscortDirection();
+            int encode = SA.encode(target, SA.getPrefix(SA.escort) + 1);
+            if(encode <= 0) {
+                System.out.println("AUAUAAUA");
+            } else {
+                rc.writeSharedArray(SA.escort, encode);
+            }
+            
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         }

@@ -173,6 +173,7 @@ public class Micro {
             if(enemiesTargeting < m.enemiesTargeting) return true;
             if(enemiesTargeting > m.enemiesTargeting) return false;
 
+            //System.out.println("THIS DONT MATTER");
             return minDistanceToEnemy < m.minDistanceToEnemy;
         }
     }
