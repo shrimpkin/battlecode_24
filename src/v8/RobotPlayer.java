@@ -276,7 +276,7 @@ public strictfp class RobotPlayer {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
 
             } else 
-            if(rc.senseMapInfo(moveTarget).isWater()) {
+            if(Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
                 MapLocation cwTarget = rc.getLocation().add(cw);
                 MapLocation ccwTarget = rc.getLocation().add(ccw);
                 if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater() && rc.canMove(cw)) {
