@@ -229,16 +229,9 @@ public strictfp class RobotPlayer {
         MapLocation target = null;
 
         if (!rc.isActionReady()) {
-            // target crumbs
             MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
             for (MapLocation t: crumLocs) {
-                if (rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater()) {
-                    if (rc.canFill(t)) {
-                        rc.canFill(t);
-                        target = t;
-                        break;
-                    }
-                } else {
+                if (!(rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater())) {
                     target = t;
                     break;
                 }
