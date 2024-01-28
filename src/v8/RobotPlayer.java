@@ -280,7 +280,20 @@ public strictfp class RobotPlayer {
             
 
             if(Utils.isNearEnemyFlag(25)) {
-                if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                // if(hasFlag && rc.canDropFlag(rc.getLocation())) {
+                //     rc.dropFlag(rc.getLocation());
+                // }
+                // if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                // if(rc.canPickupFlag(rc.getLocation())) rc.pickupFlag(rc.getLocation());
+                if(hasFlag && rc.canDropFlag(rc.getLocation())) {
+                    rc.dropFlag(rc.getLocation());
+                    if(rc.canFill(moveTarget)) { 
+                        rc.fill(moveTarget); 
+                        if(rc.canPickupFlag(rc.getLocation())) rc.pickupFlag(rc.getLocation());
+                    }
+                } else {
+                    if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                }
 
             } else 
             if(rc.senseMapInfo(moveTarget).isWater()) {
@@ -291,7 +304,17 @@ public strictfp class RobotPlayer {
                 } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater() && rc.canMove(ccw)) {
                     target = ccwTarget;
                 } else {
-                    if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                    if(hasFlag && rc.canDropFlag(rc.getLocation())) {
+                        rc.dropFlag(rc.getLocation());
+                        if(rc.canFill(moveTarget)) { 
+                            rc.fill(moveTarget); 
+                            if(rc.canPickupFlag(rc.getLocation())) rc.pickupFlag(rc.getLocation());
+                        }
+                    } else {
+                        if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                    }
+                    // if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+                    // if(rc.canPickupFlag(rc.getLocation())) rc.pickupFlag(rc.getLocation());
                 }
             }
 
