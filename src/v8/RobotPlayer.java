@@ -62,6 +62,7 @@ public strictfp class RobotPlayer {
                 move();
                 MapRecorder.updateSurroundings();
                 SA.updateMap();
+                Combat.attack();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
                 dig();

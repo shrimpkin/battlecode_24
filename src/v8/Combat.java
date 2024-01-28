@@ -134,7 +134,6 @@ public class Combat {
     public static boolean shouldRunAway() throws GameActionException {
         return numEnemiesAttackingUs > 0
             || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < numEnemiesAttackingUs * 150)
             || (rc.getHealth() < 600);
     }
 
@@ -336,7 +335,7 @@ public class Combat {
 
         target = rc.getLocation().add(dir);
         if(rc.canFill(target)) {
-            indicator += "fill ";
+            System.out.println("FILLING");
             rc.fill(target);
         }
         
