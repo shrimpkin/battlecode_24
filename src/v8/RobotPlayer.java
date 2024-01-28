@@ -418,6 +418,7 @@ public strictfp class RobotPlayer {
             int best = Integer.MAX_VALUE, index = -1;
             for (int i = 0; i < 3; i++){
                 if (rc.readSharedArray(SA.ENEMY_FLAG1+i) == 0) continue;
+                if (rc == null) System.out.println("FUCK");
                 int dist = rc.getLocation().distanceSquaredTo(SA.getLocation(SA.ENEMY_FLAG1+i));
                 if (dist < best) {
                     best = dist;
@@ -529,7 +530,9 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void fill() throws GameActionException {
-        Direction towards = rc.getLocation().directionTo(getTarget());
+        MapLocation targ = getTarget();
+        if (targ == null) return;
+        Direction towards = rc.getLocation().directionTo(targ);
         Direction cw = Utils.getClockwiseDirection(towards);
         Direction ccw = Utils.getCounterClockwiseDirection(towards);
 
