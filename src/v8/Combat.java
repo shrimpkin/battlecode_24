@@ -132,9 +132,9 @@ public class Combat {
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  > 1 
+        return numEnemiesAttackingUs > 0
             || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 400);
+            || (rc.getHealth() < 600);
     }
 
     /**
@@ -290,7 +290,21 @@ public class Combat {
     public static void build() throws GameActionException {
         MapLocation buildTarget = buildTarget(TrapType.STUN);
         boolean canBuildTrap = rc.canBuild(TrapType.STUN, buildTarget);
-        if(canBuildTrap) {
+
+        MapLocation curLoc = buildTarget;
+        boolean adajcentToTrap = false;
+        for (Direction d: new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+            MapLocation adjacent = curLoc.add(d);
+            if (rc.canSenseLocation(adjacent)) {
+                MapInfo spot = rc.senseMapInfo(adjacent);
+                if (spot.getTrapType() == TrapType.STUN) {
+                    adajcentToTrap = true;
+                    break;
+                }
+            }
+        }
+
+        if(canBuildTrap && !adajcentToTrap) {
             rc.build(TrapType.STUN, buildTarget);
         }    
     }
@@ -306,7 +320,7 @@ public class Combat {
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
         else if (shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
         else if (shouldRunAway()) mode = CombatMode.DEF;
-
+        
         Direction dir = Direction.CENTER;
 
         switch (mode) {
@@ -321,7 +335,7 @@ public class Combat {
 
         target = rc.getLocation().add(dir);
         if(rc.canFill(target)) {
-            indicator += "fill ";
+            // System.out.println("FILLING");
             rc.fill(target);
         }
         
