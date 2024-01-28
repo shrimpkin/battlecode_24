@@ -157,9 +157,18 @@ public strictfp class RobotPlayer {
         FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
         MapLocation TARGET_ENEMY_FLAGTarget = SA.getLocation(SA.TARGET_ENEMY_FLAG);
         //reseting enemy flags if not at SA location
-        if(rc.canSenseLocation(TARGET_ENEMY_FLAGTarget) && nearbyFlags.length == 0) {
-            rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
+        if (nearbyFlags.length == 0) {
+            if(rc.canSenseLocation(TARGET_ENEMY_FLAGTarget)) {
+                rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
+            }
+            for (int i = 0; i < 3; i++){
+                MapLocation loc = SA.getLocation(SA.ENEMY_FLAG1+i);
+                if (rc.canSenseLocation(loc)){
+                    rc.writeSharedArray(SA.ENEMY_FLAG1+i,0);
+                }
+            }   
         }
+
 
         // writing broadcasts
         if (rc.getRoundNum() % 100 == 0) {
@@ -408,17 +417,28 @@ public strictfp class RobotPlayer {
         if(target.equals(new MapLocation(0,0)) || target.distanceSquaredTo(rc.getLocation()) > 225) {
             int best = Integer.MAX_VALUE, index = -1;
             for (int i = 0; i < 3; i++){
-                if (rc.readSharedArray(SA.ENEMY_FLAG1+i) == 0) break;
+                if (rc.readSharedArray(SA.ENEMY_FLAG1+i) == 0) continue;
                 int dist = rc.getLocation().distanceSquaredTo(SA.getLocation(SA.ENEMY_FLAG1+i));
                 if (dist < best) {
                     best = dist;
                     index = i;
+                }        
+            }   
+            if (index != -1)
+                target = SA.getLocation(SA.ENEMY_FLAG1+index);
+            if (target.equals(new MapLocation(0,0))) {
+                if (rc.readSharedArray(SA.defend) != 0){
+                    target = SA.getLocation(SA.defend);
+                } else {
+                    target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2); 
                 }
-                if (index == -1) target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);
-                else             target = SA.getLocation(SA.ENEMY_FLAG1+index);
             }
+                // if 
+                // target = genExploreTarget(5);
+                // target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);  
         }
-//        rc.setIndicatorLine(rc.getLocation(), target, 255, 255, 255);
+        
+        rc.setIndicatorLine(rc.getLocation(), target, 255, 255, 255);
         return target;
     }
 
