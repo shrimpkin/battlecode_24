@@ -161,11 +161,11 @@ public class Micro {
         }
 
         boolean isBetterOffense(MicroInfo m) {
-            if(willDie() && !m.willDie()) return false;
-            if(!willDie() && m.willDie()) return true;
-
             if(canKill() && !m.canKill()) return true;
             if(!canKill() && m.canKill()) return false;
+
+            if(willDie() && !m.willDie()) return false;
+            if(!willDie() && m.willDie()) return true;
 
             if(canAttack() && !m.canAttack()) return true;
             if(!canAttack() && m.canAttack()) return false;

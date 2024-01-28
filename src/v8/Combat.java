@@ -134,7 +134,8 @@ public class Combat {
     public static boolean shouldRunAway() throws GameActionException {
         return numEnemiesAttackingUs > 0
             || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < numEnemiesAttackingUs * 150);
+            || (rc.getHealth() < numEnemiesAttackingUs * 150)
+            || (rc.getHealth() < 600);
     }
 
     /**
