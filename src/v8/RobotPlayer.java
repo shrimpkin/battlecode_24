@@ -3,8 +3,6 @@ package v8;
 import battlecode.common.*;
 import scala.util.Random;
 
-import java.util.ArrayList;
-
 /**
  * RobotPlayer is the class that describes your main robot strategy.
  * The run() method inside this class is like your main function: this is what we'll call once your robot
@@ -69,10 +67,9 @@ public strictfp class RobotPlayer {
                     fill();
                 }
             }
-            // for (int i = 0; i < 3; i++){
-            //     if (rc.readSharedArray(i) != 0)
-            //         rc.setIndicatorDot(SA.getLocation(i), 0, 255, 0);
-            // }
+            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG1), 255, 0, 0);
+            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG2), 0, 255, 0);
+            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG3), 0, 0, 255);
 
             rc.setIndicatorString(indicator);
             Clock.yield();
@@ -148,7 +145,7 @@ public strictfp class RobotPlayer {
         return false;
     }
 
-    
+
     /**
      * writes enemy flags into shared array
      * removes enemy flags from shared array if they aren't there
@@ -162,26 +159,26 @@ public strictfp class RobotPlayer {
         if(rc.canSenseLocation(TARGET_ENEMY_FLAGTarget) && nearbyFlags.length == 0) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
         }
-        
+
+        // writing broadcasts
+        if (rc.getRoundNum() % 100 == 0) {
+            MapLocation[] locs = rc.senseBroadcastFlagLocations();
+            for (int i = 0; i < locs.length; i++)
+                rc.writeSharedArray(SA.ENEMY_FLAG1 + i, SA.encode(locs[i], 0));
+            for (int i = locs.length; i < 3; i++)
+                rc.writeSharedArray(SA.ENEMY_FLAG1 + i, 0);
+        }
+
         //writing enemy flags into shared array
         if(SA.getPrefix(SA.TARGET_ENEMY_FLAG) == 0) {
-            
             if(nearbyFlags.length > 0) {
                 FlagInfo info = nearbyFlags[0];
-                
                 if(info.getTeam().equals(rc.getTeam().opponent())) {
                     RobotInfo robot = rc.senseRobotAtLocation(info.getLocation());
-
                     //only adds the flag to the shared array if we don't already possess it
                     if(robot == null || robot.getTeam().equals(rc.getTeam().opponent())) {
                         rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, SA.encode(info.getLocation(), 1));
                     }
-                }
-
-            } else if(rc.readSharedArray(SA.TARGET_ENEMY_FLAG) == 0 || rc.getRoundNum() % 100 == 0) {
-                if(rc.senseBroadcastFlagLocations().length != 0) {
-                    MapLocation loc = rc.senseBroadcastFlagLocations()[0];
-                    rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, SA.encode(loc, 0));
                 }
             }
         }
@@ -204,6 +201,11 @@ public strictfp class RobotPlayer {
             }
         }
 
+        // having defenders intercept flags in transit:
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
+        if (flags.length > 0 && !rc.senseMapInfo(flags[0].getLocation()).isSpawnZone()) {
+            rc.writeSharedArray(SA.defend, SA.encode(flags[0].getLocation(), 1));
+        }
     }
 
     /**
@@ -240,7 +242,7 @@ public strictfp class RobotPlayer {
 
         // this will be where we attempt to move
         if(Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() > 150) {
-            if(ID <= 3) {
+            if(ID <= 3 && rc.senseNearbyFlags(-1, rc.getTeam()).length > 0) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
                 rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1) );
@@ -268,13 +270,10 @@ public strictfp class RobotPlayer {
             Direction towards = rc.getLocation().directionTo(target);
             Direction cw = Utils.getClockwiseDirection(towards);
             Direction ccw = Utils.getCounterClockwiseDirection(towards);
-
             MapLocation moveTarget = rc.getLocation().add(towards);
-            
 
             if(Utils.isNearEnemyFlag(25)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
-
             } else 
             if(Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
                 MapLocation cwTarget = rc.getLocation().add(cw);
@@ -375,7 +374,7 @@ public strictfp class RobotPlayer {
             } else {
                 rc.writeSharedArray(SA.escort, encode);
             }
-            
+
             indicator += "Escorting " + SA.getPrefix(SA.escort);
             return target;
         }
@@ -405,10 +404,20 @@ public strictfp class RobotPlayer {
         
         //go aggresive and if not aggresive targets exists go middle
         target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
-        if(target.equals(new MapLocation(0,0))) {
-            target = new MapLocation(rc.getMapWidth()/ 2, rc.getMapHeight() / 2);
+        if(target.equals(new MapLocation(0,0)) || target.distanceSquaredTo(rc.getLocation()) > 225) {
+            int best = Integer.MAX_VALUE, index = -1;
+            for (int i = 0; i < 3; i++){
+                if (rc.readSharedArray(SA.ENEMY_FLAG1+i) == 0) break;
+                int dist = rc.getLocation().distanceSquaredTo(SA.getLocation(SA.ENEMY_FLAG1+i));
+                if (dist < best) {
+                    best = dist;
+                    index = i;
+                }
+                if (index == -1) target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);
+                else             target = SA.getLocation(SA.ENEMY_FLAG1+index);
+            }
         }
-
+//        rc.setIndicatorLine(rc.getLocation(), target, 255, 255, 255);
         return target;
     }
 
