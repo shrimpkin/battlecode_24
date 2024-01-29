@@ -273,7 +273,64 @@ public strictfp class RobotPlayer {
         if (target == null)  target = getTarget();
 
         boolean hasFlag = rc.hasFlag();
-        if(target != null) { // have a target to move to
+        boolean flagPassed = false;
+        if(target != null) {
+            // flag passing logic
+            // if there's a duck that's closer to the target than us we should drop flag and pass it to them
+            // this should help ducks with flag getting stuck in a cluster
+            if (rc.hasFlag()) {
+                // TODO: Also drop flag if we're stuck in like water
+
+                // TODO: ducks can drop flags sqrt 2 away and can pick up sqrt 2 away
+                // right now just sqrt2 dist
+                RobotInfo[] friends = rc.senseNearbyRobots(2, rc.getTeam());
+                RobotInfo bestFriend = null;
+                int friendDistToFlag = Integer.MAX_VALUE;
+                int myDist = rc.getLocation().distanceSquaredTo(target);
+
+                // constants
+                int friendPassingDistance = 2;
+                int minFriendsToPass = 3;
+                boolean disallowPassIfInDanger = true;
+                int dangerIfNumEnemies = 3;
+                int dangerIfEnemiesWithinDist = 9;
+
+
+                int numFriends = 0;
+                int numEnemies = 0;
+                for (RobotInfo nearby: rc.senseNearbyRobots(-1)) {
+                    if (nearby.getTeam().equals(rc.getTeam())) {
+                        if (!(nearby.getLocation().distanceSquaredTo(rc.getLocation()) > friendPassingDistance)) continue;
+                        RobotInfo f = nearby;
+                        numFriends++;
+                        int dist = f.getLocation().distanceSquaredTo(target);
+                        if (rc.canDropFlag(f.getLocation()) && dist < friendDistToFlag && f.ID > ID) {
+                            friendDistToFlag = dist;
+                            bestFriend = f;
+                        }
+                    } else {
+                        // enemy
+                        RobotInfo e = nearby;
+                        if (!(rc.getLocation().distanceSquaredTo(e.getLocation()) > dangerIfEnemiesWithinDist)) continue;
+                        numEnemies++;
+                    }
+                }
+
+                boolean shouldPass = true;
+                if (numEnemies >= dangerIfNumEnemies && disallowPassIfInDanger) shouldPass = false;
+                if (!(minFriendsToPass <= numFriends)) shouldPass = false;
+
+
+                // passing is better
+                if (bestFriend != null && shouldPass && friendDistToFlag < myDist) {
+                    System.out.println("passing!");
+                    rc.dropFlag(bestFriend.getLocation());
+                }
+
+            }
+
+
+            // have a target to move to
             // need to check if the target is obstructed first, and if so, fill it
             // but if the target is obstructed, check left and right is also obstructed
             // if left and right also obstructed, then we dig
@@ -289,16 +346,17 @@ public strictfp class RobotPlayer {
 
             if(Utils.isNearEnemyFlag(25)) {
                 if(rc.canFill(moveTarget)) rc.fill(moveTarget);
-            } else 
-            if(Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
-                MapLocation cwTarget = rc.getLocation().add(cw);
-                MapLocation ccwTarget = rc.getLocation().add(ccw);
-                if(Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater() && rc.canMove(cw)) {
-                    target = cwTarget;
-                } else if(Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater() && rc.canMove(ccw)) {
-                    target = ccwTarget;
-                } else {
-                    if(rc.canFill(moveTarget)) rc.fill(moveTarget);
+            } else {
+                if (Utils.isValidMapLocation(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
+                    MapLocation cwTarget = rc.getLocation().add(cw);
+                    MapLocation ccwTarget = rc.getLocation().add(ccw);
+                    if (Utils.isValidMapLocation(cwTarget) && !rc.senseMapInfo(cwTarget).isWater() && rc.canMove(cw)) {
+                        target = cwTarget;
+                    } else if (Utils.isValidMapLocation(ccwTarget) && !rc.senseMapInfo(ccwTarget).isWater() && rc.canMove(ccw)) {
+                        target = ccwTarget;
+                    } else {
+                        if (rc.canFill(moveTarget)) rc.fill(moveTarget);
+                    }
                 }
             }
 
@@ -308,7 +366,7 @@ public strictfp class RobotPlayer {
 
         // updating shared array that a flag was dropped off during
         // this robots movement
-        if(rc.hasFlag() != hasFlag) {
+        if(rc.hasFlag() != hasFlag && !flagPassed) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
         }
