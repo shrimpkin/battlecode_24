@@ -319,6 +319,7 @@ public class Combat {
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
         else if (shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
+        else if (shouldRunAway()) mode = CombatMode.DEF;
 
         Direction dir = Direction.CENTER;
 

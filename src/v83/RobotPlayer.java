@@ -1,6 +1,15 @@
 package v83;
 
-import battlecode.common.*;
+import battlecode.common.Clock;
+import battlecode.common.Direction;
+import battlecode.common.FlagInfo;
+import battlecode.common.GameActionException;
+import battlecode.common.GlobalUpgrade;
+import battlecode.common.MapInfo;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
+import battlecode.common.TrapType;
 import scala.util.Random;
 
 /**
@@ -37,8 +46,6 @@ public strictfp class RobotPlayer {
         rc = m_rc;
 
         while(true) {
-            //used for debugging, only value that should be passed through rc.setIndicator()
-            //can be seen by hovering over robot
             indicator = ID + ": ";
 
             if(rc.getRoundNum() == 1) init();
@@ -63,16 +70,16 @@ public strictfp class RobotPlayer {
                 Combat.attack();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                dig();
+                if(rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
+                    dig();
+                }
+                if(rc.getRoundNum() >= 230) {
+                    stunAroundSpawn();
+                }
                 if(rc.getRoundNum() >= 190) {
                     fill();
                 }
             }
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG1), 255, 0, 0);
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG2), 0, 255, 0);
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG3), 0, 0, 255);
-
-            rc.setIndicatorString(indicator);
             Clock.yield();
         }
     }
@@ -298,7 +305,7 @@ public strictfp class RobotPlayer {
             }
 
             Pathfinding.initTurn();
-            Pathfinding.move(target); 
+            Pathfinding.move(target);
         } 
 
         // updating shared array that a flag was dropped off during
@@ -405,8 +412,6 @@ public strictfp class RobotPlayer {
                     explorationTarget = genExploreTarget(10);
                     lastChangeTurn = rc.getRoundNum();
                 }
-                // if (explorationTarget != null)
-                //     rc.setIndicatorDot(explorationTarget, 255, 0, 0);
                 target = explorationTarget;
             }
             return target;
@@ -418,6 +423,7 @@ public strictfp class RobotPlayer {
             int best = Integer.MAX_VALUE, index = -1;
             for (int i = 0; i < 3; i++){
                 if (rc.readSharedArray(SA.ENEMY_FLAG1+i) == 0) continue;
+                if (rc == null) System.out.println("FUCK");
                 int dist = rc.getLocation().distanceSquaredTo(SA.getLocation(SA.ENEMY_FLAG1+i));
                 if (dist < best) {
                     best = dist;
@@ -433,12 +439,8 @@ public strictfp class RobotPlayer {
                     target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2); 
                 }
             }
-                // if 
-                // target = genExploreTarget(5);
-                // target = new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2);  
         }
-        
-        rc.setIndicatorLine(rc.getLocation(), target, 255, 255, 255);
+
         return target;
     }
 
@@ -514,6 +516,26 @@ public strictfp class RobotPlayer {
         }
     }
 
+    public static void stunAroundSpawn() throws GameActionException {
+        if(Utils.isNearOurFlag(9)) {
+            MapLocation target = rc.getLocation().add(Direction.NORTH);
+            if(target.x % 2 != target.y % 2 && Utils.isValidMapLocation(target)) {
+                if(rc.canBuild(TrapType.STUN, target)) {
+                    // check adjacent
+                    boolean adjacentToTrap = false;
+                    /*for (Direction d: new Direction[]{Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST}) {
+                        MapLocation trapLoc = target.add(d);
+                        if (Utils.isValidMapLocation(trapLoc) && rc.canSenseLocation(trapLoc) && rc.senseMapInfo(trapLoc).getTrapType() == TrapType.STUN) {
+                            adjacentToTrap = true;
+                        }
+                    }*/
+
+                    if (!adjacentToTrap) rc.build(TrapType.STUN, target);
+                }
+            }
+        }
+    }
+
     /**
      * Attempts to buy global upgrades
      * Buys action then healing then capturing
@@ -529,7 +551,9 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     public static void fill() throws GameActionException {
-        Direction towards = rc.getLocation().directionTo(getTarget());
+        MapLocation targ = getTarget();
+        if (targ == null) return;
+        Direction towards = rc.getLocation().directionTo(targ);
         Direction cw = Utils.getClockwiseDirection(towards);
         Direction ccw = Utils.getCounterClockwiseDirection(towards);
 
@@ -549,9 +573,9 @@ public strictfp class RobotPlayer {
     }
 
     public static void dig() throws GameActionException {
-        if(Utils.isNearOurFlag(36)) {
+        if(Utils.isNearOurFlag(16)) {
             MapLocation target = rc.getLocation().add(Direction.NORTH);
-            if(rc.getLocation().x % 2 == rc.getLocation().y % 2 && Utils.isValidMapLocation(target)) {
+            if(target.x % 2 == target.y % 2 && Utils.isValidMapLocation(target)) {
                 if(rc.canDig(target)) {
                     if (rc.canSenseLocation(target) && rc.senseMapInfo(target).getCrumbs() == 0)  rc.dig(target);
                 }
