@@ -1,20 +1,10 @@
 package v8;
 
-import battlecode.common.Direction;
-import battlecode.common.FlagInfo;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapInfo;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotInfo;
-import battlecode.common.TrapType;
+import battlecode.common.*;
 
 public class Combat {
     static RobotController rc;
     static int ID;
-    boolean shouldRunAway;
-    static Micro micro;
 
     static int numEnemiesAttackingUs;
     static int numFriendliesHealingUs;
@@ -30,16 +20,12 @@ public class Combat {
     static MapLocation averageEnemy;
     static MapLocation averageTrap;
     static MapLocation averageNearTrap;
-    
-    static int OUTNUMBER = 2;
-    static int IS_STUCK_TURNS = 10;
 
     //these are constants used for controlling
     //the attack and defense directions
+    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE}
 
-    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
-
-    enum ActionMode {HEAL, ATT, NONE};
+    enum ActionMode {HEAL, ATT, NONE}
 
     static CombatMode[] modeLog;
     static MapLocation[] locations;
@@ -56,7 +42,7 @@ public class Combat {
         locations = new MapLocation[2001];
         actionLog = new ActionMode[2001];
         actionLog[0] = ActionMode.NONE;
-        micro = new Micro();
+//        micro = new Micro();
     }
 
     public static void reset() throws GameActionException {
@@ -137,16 +123,9 @@ public class Combat {
             || (rc.getHealth() < 600);
     }
 
-    /**
-     * Makes the
-     *
-     * @return
-     * @throws GameActionException
-     */
     public static Direction getFlagProtectionDirection() throws GameActionException {
         //first check to see if the enemies have already grabbed our flag
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
-
         for (FlagInfo flag : flags) {
             MapLocation flagLocation = flag.getLocation();
             RobotInfo robot = rc.senseRobotAtLocation(flagLocation);
@@ -154,34 +133,23 @@ public class Combat {
                 return rc.getLocation().directionTo(flagLocation);
             }
         }
-
-        return micro.getOffensiveDirection();
+        return Micro.getOffensiveDirection();
     }
 
-    /**
-     * @return
-     * @throws GameActionException
-     */
     public static Direction getFlagOffensiveDirection() throws GameActionException {
         return rc.getLocation().directionTo(getFlagTarget().getLocation());
     }
 
     public static FlagInfo getFlagTarget() throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
-
         for (FlagInfo flag : flags) {
             if (rc.getLocation().isWithinDistanceSquared(flag.getLocation(), 4)) {
                 return flag;
             }
         }
-
         return null;
     }
 
-    /**
-     * @return
-     * @throws GameActionException
-     */
     public static boolean shouldGrabFlag() throws GameActionException {
         FlagInfo flagTarget = getFlagTarget();
         if (flagTarget == null) return false;
@@ -212,7 +180,7 @@ public class Combat {
         MapLocation target = null;
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo robot : enemyRobots) {
-            //attacking flag carier if possible
+            //attacking flag carrier if possible
             if (robot.hasFlag() && rc.canAttack(robot.getLocation())) {
                 rc.attack(robot.getLocation());
                 indicator += "a: " + target + " ";
@@ -233,10 +201,10 @@ public class Combat {
     }
 
     /**
-     * magic constants where they come from i do not know
+     * magic constants where they come from I do not know
      * where they go who can say
      */
-    public static boolean shouldBuild() throws GameActionException {
+    public static boolean shouldBuild() {
         boolean output = enemies.length >= 3
                 && rc.getRoundNum() > 190;
 
@@ -270,10 +238,8 @@ public class Combat {
 
     /**
      * Returns a MapLocation to build on that is best
-     *
-     * @return
      */
-    public static MapLocation buildTarget(TrapType trap) throws GameActionException {
+    public static MapLocation buildTarget(TrapType trap) {
         MapLocation bestLocationSoFar = rc.getLocation();
         int minDistance = Integer.MAX_VALUE;
         for (Direction dir : Utils.directions) {
@@ -291,20 +257,19 @@ public class Combat {
         MapLocation buildTarget = buildTarget(TrapType.STUN);
         boolean canBuildTrap = rc.canBuild(TrapType.STUN, buildTarget);
 
-        MapLocation curLoc = buildTarget;
-        boolean adajcentToTrap = false;
+        boolean adjacentToTrap = false;
         for (Direction d: new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
-            MapLocation adjacent = curLoc.add(d);
+            MapLocation adjacent = buildTarget.add(d);
             if (rc.canSenseLocation(adjacent)) {
                 MapInfo spot = rc.senseMapInfo(adjacent);
                 if (spot.getTrapType() == TrapType.STUN) {
-                    adajcentToTrap = true;
+                    adjacentToTrap = true;
                     break;
                 }
             }
         }
 
-        if(canBuildTrap && !adajcentToTrap) {
+        if(canBuildTrap && !adjacentToTrap) {
             rc.build(TrapType.STUN, buildTarget);
         }    
     }
@@ -314,7 +279,7 @@ public class Combat {
      */
     public static void runCombat() throws GameActionException {
         Combat.reset();
-        micro.initTurn(rc);
+        Micro.initTurn(rc);
         CombatMode mode = CombatMode.OFF;
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
@@ -326,8 +291,8 @@ public class Combat {
         switch (mode) {
             case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
             case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
-            case DEF: dir = micro.getDefensiveDirection(); break;
-            case OFF: dir = micro.getOffensiveDirection(); break;
+            case DEF: dir = Micro.getDefensiveDirection(); break;
+            case OFF: dir = Micro.getOffensiveDirection(); break;
             case NONE: break;
         }
 
@@ -339,7 +304,7 @@ public class Combat {
             rc.fill(target);
         }
         
-        if (mode.equals(CombatMode.FLAG_OFF) || mode.equals(CombatMode.FLAG_DEF) || micro.shouldAttackFirst) {
+        if (mode.equals(CombatMode.FLAG_OFF) || mode.equals(CombatMode.FLAG_DEF) || Micro.shouldAttackFirst) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
@@ -359,7 +324,6 @@ public class Combat {
     public static void updateIndicator() {
         for (int i = rc.getRoundNum(); i > 0; i--) {
             if (rc.getRoundNum() - i > 2) break;
-
             indicator += "(" + modeLog[i] + "," + actionLog[i] + ") ";
         }
     }
