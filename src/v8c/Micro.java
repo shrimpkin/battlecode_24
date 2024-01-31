@@ -1,4 +1,4 @@
-package v8;
+package v8c;
 
 import battlecode.common.*;
 
@@ -159,11 +159,8 @@ public class Micro {
             // fewer enemies that can attack us
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
-
             // if both on action cool-down, prioritize location w/ the fewest enemies that can drive-by us in 1 turn
-            if(enemiesSniping < m.enemiesSniping) return true;
-            if(enemiesSniping > m.enemiesSniping) return false;
-
+            if (!actionReady && !m.actionReady) return enemiesSniping < m.enemiesSniping;
             // put distance between us and enemy
             return minDistanceToEnemy > m.minDistanceToEnemy;
         }
@@ -177,6 +174,9 @@ public class Micro {
 
             if (canAttack() && !m.canAttack()) return true;
             if (!canAttack() && m.canAttack()) return false;
+
+            // if both on action cool-down, prioritize location w/ the fewest enemies that can drive-by us in 1 turn
+            if (!actionReady && !m.actionReady) return enemiesSniping < m.enemiesSniping;
 
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
