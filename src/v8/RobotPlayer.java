@@ -61,9 +61,12 @@ public strictfp class RobotPlayer {
                     fill();
                 }
             }
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG1), 255, 0, 0);
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG2), 0, 255, 0);
-            rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG3), 0, 0, 255);
+            if (ID == 1 || ID == 50) { // print state for first and last ducks
+                rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG1), 255, 0, 0);
+                rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG2), 0, 255, 0);
+                rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG3), 0, 0, 255);
+                rc.setIndicatorDot(SA.getLocation(SA.defend), 100, 150, 100);
+            }
             rc.setIndicatorString(indicator);
             Clock.yield();
         }
@@ -124,10 +127,6 @@ public strictfp class RobotPlayer {
                 bestSpawn = spawn;
                 minDist = target.distanceSquaredTo(bestSpawn);
             }
-        }
-
-        if (bestSpawn == null) {
-
         }
 
         if (bestSpawn != null) {
@@ -203,9 +202,15 @@ public strictfp class RobotPlayer {
         }
 
         // having defenders intercept flags in transit:
-        FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
-        if (flags.length > 0 && !rc.senseMapInfo(flags[0].getLocation()).isSpawnZone()) {
-            rc.writeSharedArray(SA.defend, SA.encode(flags[0].getLocation(), 1));
+        if (rc.readSharedArray(SA.defend) != 0) {
+            FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
+            if (flags.length > 0 && !rc.senseMapInfo(flags[0].getLocation()).isSpawnZone()) {
+                rc.writeSharedArray(SA.defend, SA.encode(flags[0].getLocation(), 1));
+            } else if (flags.length == 0 && rc.getLocation().equals(SA.getLocation(SA.defend))) {
+                // on top of flag location, can't see flag
+                System.out.println("unflagging!");
+                rc.writeSharedArray(SA.defend, 0);
+            }
         }
     }
 
@@ -241,10 +246,11 @@ public strictfp class RobotPlayer {
 
         // this will be where we attempt to move
         if (Utils.isEnemies() && !rc.hasFlag() && rc.getRoundNum() > 150) {
-            if (ID <= 3 && rc.senseNearbyFlags(-1, rc.getTeam()).length > 0) {
+            FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
+            if (ID <= 3 && flags.length > 0 && rc.canSenseLocation(getFlagDefense())) {
                 //adding defenses if we sense enemy robots
                 indicator += "HELP ";
-                rc.writeSharedArray(SA.defend, SA.encode(getFlagDefense(), 1));
+                rc.writeSharedArray(SA.defend, SA.encode(flags[0].getLocation(), 1));
                 Combat.attack();
             } else {
                 Combat.runCombat();
@@ -436,14 +442,10 @@ public strictfp class RobotPlayer {
      */
     public static MapLocation getFlagDefense() throws GameActionException {
         switch (ID) {
-            case 1:
-                return SA.getLocation(SA.FLAG1);
-            case 2:
-                return SA.getLocation(SA.FLAG2);
-            case 3:
-                return SA.getLocation(SA.FLAG3);
+            case 1: return SA.getLocation(SA.FLAG1);
+            case 2: return SA.getLocation(SA.FLAG2);
+            case 3: return SA.getLocation(SA.FLAG3);
         }
-
         return null;
     }
 
