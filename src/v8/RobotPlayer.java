@@ -290,11 +290,10 @@ public strictfp class RobotPlayer {
 
                 // constants
                 int friendPassingDistance = 2;
-                int minFriendsToPass = 3;
+                int minFriendsToPass = 0;
                 boolean disallowPassIfInDanger = true;
                 int dangerIfNumEnemies = 3;
                 int dangerIfEnemiesWithinDist = 9;
-
 
                 int numFriends = 0;
                 int numEnemies = 0;
@@ -309,7 +308,6 @@ public strictfp class RobotPlayer {
                             bestFriend = f;
                         }
                     } else {
-                        // enemy
                         RobotInfo e = nearby;
                         if (!(rc.getLocation().distanceSquaredTo(e.getLocation()) > dangerIfEnemiesWithinDist)) continue;
                         numEnemies++;
@@ -319,7 +317,6 @@ public strictfp class RobotPlayer {
                 boolean shouldPass = true;
                 if (numEnemies >= dangerIfNumEnemies && disallowPassIfInDanger) shouldPass = false;
                 if (!(minFriendsToPass <= numFriends)) shouldPass = false;
-
 
                 // passing is better
                 if (bestFriend != null && shouldPass && friendDistToFlag < myDist) {
