@@ -224,15 +224,18 @@ public strictfp class RobotPlayer {
     public static void move() throws GameActionException {
         MapLocation target = null;
 
+        // Only target crumbs if we don't have flag
         MapLocation[] crumLocs = rc.senseNearbyCrumbs(-1);
-        for (MapLocation t : crumLocs) {
-            if (!(rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater())) {
-                target = t;
-                break;
-            } else {
-                if (rc.canFill(t)) rc.fill(t);
-                target = t;
-                break;
+        if (!rc.hasFlag()) {
+            for (MapLocation t : crumLocs) {
+                if (!(rc.canSenseLocation(t) && rc.senseMapInfo(t).isWater())) {
+                    target = t;
+                    break;
+                } else {
+                    if (rc.canFill(t)) rc.fill(t);
+                    target = t;
+                    break;
+                }
             }
         }
 
@@ -268,9 +271,9 @@ public strictfp class RobotPlayer {
             Direction ccw = towards.rotateLeft();
             MapLocation moveTarget = rc.getLocation().add(towards);
 
-            if (Utils.isNearEnemyFlag(25)) {
+            if (!rc.hasFlag() && Utils.isNearEnemyFlag(25)) {
                 if (rc.canFill(moveTarget)) rc.fill(moveTarget);
-            } else if (rc.onTheMap(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
+            } else if (!rc.hasFlag() && rc.onTheMap(moveTarget) && rc.canSenseLocation(moveTarget) && rc.senseMapInfo(moveTarget).isWater()) {
                 MapLocation cwTarget = rc.getLocation().add(cw);
                 MapLocation ccwTarget = rc.getLocation().add(ccw);
                 if (rc.onTheMap(cwTarget) && !rc.senseMapInfo(cwTarget).isWater() && rc.canMove(cw)) {
