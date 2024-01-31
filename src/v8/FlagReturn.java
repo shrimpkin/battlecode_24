@@ -30,7 +30,7 @@ public class FlagReturn {
         //this makes sure that if we are already on the other side of the enemies that we 
         if(noEnemies().distanceSquaredTo(rc.getLocation()) < Combat.averageEnemy.distanceSquaredTo(noEnemies())) {
             indicator += "NEN ";
-            noEnemies();
+            return noEnemies();
         }
         
         indicator += "RAW ";
