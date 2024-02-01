@@ -135,7 +135,7 @@ public class Micro {
         boolean willDie() {
             if (!canMove) return true;
 
-            return enemiesSniping * DPS >= rc.getHealth();
+            return enemiesTargeting * DPS >= rc.getHealth();
         }
 
         boolean isBetterAttack(MicroInfo m) {
@@ -156,11 +156,12 @@ public class Micro {
             // prioritize own life
             if (willDie() && !m.willDie()) return false;
             if (!willDie() && m.willDie()) return true;
+            
             // fewer enemies that can attack us
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
 
-            // if both on action cool-down, prioritize location w/ the fewest enemies that can drive-by us in 1 turn
+            // fewer enemies that can snipe us
             if(enemiesSniping < m.enemiesSniping) return true;
             if(enemiesSniping > m.enemiesSniping) return false;
 
@@ -180,9 +181,6 @@ public class Micro {
             
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
-            
-            if(enemiesSniping < m.enemiesSniping) return true;
-            if(enemiesSniping > m.enemiesSniping) return false;
             
             return minDistanceToEnemy < m.minDistanceToEnemy;
         }
