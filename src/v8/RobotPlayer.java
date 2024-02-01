@@ -190,8 +190,34 @@ public strictfp class RobotPlayer {
         for (FlagInfo flag : nearbyFlags) {
             MapLocation flagLoc = flag.getLocation();
             if (rc.canSenseLocation(flagLoc) && rc.canPickupFlag(flagLoc)) {
-                rc.pickupFlag(flagLoc);
-                rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
+                // if there's a closer friend that can return the flag maybe we shouldn't pick it up
+
+
+                // only pick up if we're the targeted just use the prefix
+                // 0 marked as no pass
+                int passTargetID = rc.readSharedArray(SA.PASS_TARGET);
+                boolean shouldPickup = passTargetID == 0 || passTargetID == rc.getID();
+                //System.out.println("ID: " + rc.getID() + " passTargetID: " + passTargetID);
+
+                // If the pass target ID isn't nearby pickup anyways
+                if (!shouldPickup) {
+                    boolean found = false;
+                    for (RobotInfo friend: rc.senseNearbyRobots(2, rc.getTeam())) {
+                        if (friend.getID() == passTargetID) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) shouldPickup = true;
+                }
+
+
+                if (shouldPickup) {
+                    rc.pickupFlag(flagLoc);
+                    rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
+                    rc.writeSharedArray(SA.PASS_TARGET, 0);
+                    //System.out.println("ID: " + rc.getID() + "picked up!");
+                }
             }
         }
 
@@ -300,7 +326,11 @@ public strictfp class RobotPlayer {
                         RobotInfo f = nearby;
                         int distTarget = f.getLocation().distanceSquaredTo(target);
                         Optional<MapLocation> openLocation = findOpenLocationForFlag(f.getLocation());
-                        if (openLocation.isPresent() && rc.onTheMap(openLocation.get()) && rc.canDropFlag(openLocation.get()) && distTarget < friendDistToFlag) {
+                        if (openLocation.isPresent() &&
+                                rc.onTheMap(openLocation.get()) &&
+                                rc.canDropFlag(openLocation.get()) &&
+                                distTarget < friendDistToFlag /*&&
+                                (bestFriend != null && ID < bestFriend.ID)*/) {
                             friendDistToFlag = distTarget;
                             bestFriend = f;
                             // Drop the flag at the open location
@@ -320,10 +350,11 @@ public strictfp class RobotPlayer {
 
                 // passing is better
                 if (bestFriend != null && openLoc != null && shouldPass && friendDistToFlag < myDist) {
-                    //System.out.println("passing!");
+                    //System.out.println("passing to " + bestFriend.getID());
+                    rc.writeSharedArray(SA.PASS_TARGET, bestFriend.getID());
                     rc.dropFlag(openLoc);
+                    flagPassed = true;
                 }
-
             }
 
 
@@ -363,6 +394,7 @@ public strictfp class RobotPlayer {
         if(rc.hasFlag() != hasFlag && !flagPassed) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
+            rc.writeSharedArray(SA.PASS_TARGET, 0);
         }
         indicator += target + "\n";
     }
