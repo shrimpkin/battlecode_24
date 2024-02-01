@@ -277,10 +277,13 @@ public strictfp class RobotPlayer {
                 int myDist = rc.getLocation().distanceSquaredTo(target);
 
                 // constants
+                // good one are like disallowPassIfInDanger = true
+                // minFriendsToPass = 7
+                // trying it hyper aggresive
                 int friendPassingDistance = 2;
                 int friendSafetyDistance = 9;
-                int minFriendsToPass = 5;
-                boolean disallowPassIfInDanger = true;
+                int minFriendsToPass = 0;
+                boolean disallowPassIfInDanger = false;
                 int dangerIfNumEnemies = 3;
                 int dangerIfEnemiesWithinDist = 6;
 
