@@ -89,4 +89,41 @@ public class Utils {
 
         return false;
     }
+
+    public static boolean isNearEnemyFlag(int squaredRadius) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        for (int flag: new int[]{SA.BROADCAST1, SA.BROADCAST2, SA.BROADCAST3, SA.TARGET_ENEMY_FLAG}) {
+            MapLocation flagLoc = SA.getLocation(flag);
+            int prefix = SA.getPrefix(flag);
+
+            if (prefix == 1 && rc.onTheMap(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+                return true;
+            }
+        }
+
+        // otherwise if we don't have resort to the broadcast location
+        for (MapLocation flag: rc.senseBroadcastFlagLocations()) {
+            if (curLoc.distanceSquaredTo(flag) < squaredRadius) {
+                return true;
+            }
+        }
+       
+        return false;
+    }
+
+    public static boolean isNearOurFlag(int squaredRadius) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        for (int flag: new int[]{SA.FLAG1, SA.FLAG2, SA.FLAG3}) {
+            MapLocation flagLoc = SA.getLocation(flag);
+            if (rc.onTheMap(flagLoc) && curLoc.distanceSquaredTo(flagLoc) < squaredRadius) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void showLoc(int saIndex, int r, int g, int b) throws GameActionException {
+        if (rc.readSharedArray(saIndex) == 0) return;
+        rc.setIndicatorDot(SA.getLocation(saIndex), r, g, b);
+    }
 }
