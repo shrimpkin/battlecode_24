@@ -17,7 +17,7 @@ public strictfp class RobotPlayer {
     //number that indicates when the robot move in the turn
     static public int ID = 0;
     static int NUM_ROBOTS_TO_DEFEND = 0;
-    static int NUM_ROBOTS_TO_ESCORT = 0;
+    static int NUM_ROBOTS_TO_ESCORT = 3;
     static int ENEMIES_PER_TRAP = 3;
     //string used for debugging purposes
     static String indicator;
@@ -68,6 +68,7 @@ public strictfp class RobotPlayer {
                 Utils.showLoc(SA.EFSPAWN3, 0, 0, 100);
                 Utils.showLoc(SA.defend, 150, 0, 150);
                 Utils.showLoc(SA.escort, 150, 150, 0);
+                indicator += String.format("[eflag prefix: %d %d %d]", SA.getPrefix(SA.EFSPAWN1), SA.getPrefix(SA.EFSPAWN2), SA.getPrefix(SA.EFSPAWN3));
             }
             rc.setIndicatorString(indicator);
             Clock.yield();
@@ -296,7 +297,7 @@ public strictfp class RobotPlayer {
                 // constants
                 // good one are like disallowPassIfInDanger = true
                 // minFriendsToPass = 7
-                // trying it hyper aggresive
+                // trying it hyper aggressive
                 int friendPassingDistance = 2;
                 int friendSafetyDistance = 9;
                 int minFriendsToPass = 0;
@@ -419,7 +420,7 @@ public strictfp class RobotPlayer {
      */
     private static MapLocation getTarget() throws GameActionException {
         MapLocation target;
-        //attempts to return flag to closest spawn location
+        //attempts to return flag to the closest spawn location
         if (rc.hasFlag()) {
             target = FlagReturn.getReturnTarget();
             indicator += FlagReturn.indicator;
@@ -490,6 +491,7 @@ public strictfp class RobotPlayer {
      *     <li>known flag spawn locations</li>
      *     <li>flag broadcast locations</li>
      *     <li>own flag defense</li>
+     *     <li>escorting returning flags</li>
      *     <li>middle of map</li>
      * </ol>
      */
@@ -520,6 +522,12 @@ public strictfp class RobotPlayer {
             return defense;
         }
 
+        MapLocation escort = SA.getLocation(SA.escort);
+        if (rc.readSharedArray(SA.escort) != 0){
+            indicator += "ESCORT";
+            return escort;
+        }
+
         return new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
     }
 
@@ -543,7 +551,7 @@ public strictfp class RobotPlayer {
     private static MapLocation getBestEFlagSpawn(MapLocation cur) throws GameActionException{
         MapLocation best = null;
         int minDist = Integer.MAX_VALUE;
-        for (int i = SA.EFSPAWN1; i <= SA.EFSPAWN1; i++){
+        for (int i = SA.EFSPAWN1; i <= SA.EFSPAWN3; i++){
             if (SA.getPrefix(i) != 1) continue; // 0 : not there, 2 : captured
             MapLocation broad = SA.getLocation(i);
             if (cur.distanceSquaredTo(broad) < minDist) {
@@ -573,7 +581,7 @@ public strictfp class RobotPlayer {
      */
     public static void defenderBuild() throws GameActionException {
         if (ID >= 4) return; // not a defender
-        if (rc.getRoundNum() < 200) return; //want to only place defensive traps if we can win center fight
+        if (rc.getRoundNum() <= 200) return; //want to only place defensive traps if we can win center fight
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if (rc.getActionCooldownTurns() > 0 || rc.getCrumbs() < 250) return; // can't build: on cool-down / no money
         // active defense - put bombs on direction closest to the nearest enemy (not in setup)
@@ -632,6 +640,13 @@ public strictfp class RobotPlayer {
                 if (rc.canBuild(TrapType.STUN, target)) {
                     // check adjacent
                     boolean adjacentToTrap = false;
+                    /*for (Direction d: new Direction[]{Direction.NORTHWEST, Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST}) {
+                        MapLocation trapLoc = target.add(d);
+                        if (Utils.isValidMapLocation(trapLoc) && rc.canSenseLocation(trapLoc) && rc.senseMapInfo(trapLoc).getTrapType() == TrapType.STUN) {
+                            adjacentToTrap = true;
+                        }
+                    }*/
+
                     if (!adjacentToTrap) rc.build(TrapType.STUN, target);
                 }
             }
@@ -692,6 +707,32 @@ public strictfp class RobotPlayer {
         RobotInfo[] friendlyRobots = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation target = null;
         int minHealth = 1001;
+
+        // in an attempt to make not everyone end up specialized as healers
+        // lets assign 15 healers ID [20,35] with a higher change to heal
+        // todo: investigate this more
+        boolean shouldHeal = true;
+
+        // check if enemy in face
+        RobotInfo[] enemiesNearby = rc.senseNearbyRobots(4, rc.getTeam().opponent());
+        if (enemiesNearby.length > 0) {
+            minHealth = 250;
+            if (rng.nextDouble() > 0.5) shouldHeal = true;
+        } else {
+            shouldHeal = true;
+        }
+
+        /*if (ID >= 4 && ID <= 30) {
+            shouldHeal = true;
+        } else {
+            // lets assign a chance for this to heal
+            // these are attackers only heal if we're in "danger"
+            // save our cooldown for more attacks
+            minHealth = 750;
+                shouldHeal = true;
+        }*/
+
+        if (!shouldHeal) return;
 
         for (RobotInfo robot : friendlyRobots) {
             if (rc.canHeal(robot.getLocation())) {
