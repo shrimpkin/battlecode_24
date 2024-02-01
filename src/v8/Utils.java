@@ -92,7 +92,7 @@ public class Utils {
 
     public static boolean isNearEnemyFlag(int squaredRadius) throws GameActionException {
         MapLocation curLoc = rc.getLocation();
-        for (int flag: new int[]{SA.ENEMY_FLAG1, SA.ENEMY_FLAG2, SA.ENEMY_FLAG3, SA.TARGET_ENEMY_FLAG}) {
+        for (int flag: new int[]{SA.BROADCAST1, SA.BROADCAST2, SA.BROADCAST3, SA.TARGET_ENEMY_FLAG}) {
             MapLocation flagLoc = SA.getLocation(flag);
             int prefix = SA.getPrefix(flag);
 
@@ -119,7 +119,11 @@ public class Utils {
                 return true;
             }
         }
-
         return false;
+    }
+
+    public static void showLoc(int saIndex, int r, int g, int b) throws GameActionException {
+        if (rc.readSharedArray(saIndex) == 0) return;
+        rc.setIndicatorDot(SA.getLocation(saIndex), r, g, b);
     }
 }

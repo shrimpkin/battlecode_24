@@ -1,6 +1,5 @@
 package v8copy;
 
-import battlecode.common.Clock;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
@@ -25,7 +24,6 @@ public class MapRecorder {
      * <p> [bytecode cost: ~1600-3500] </p>
      */
     public static void updateSurroundings() throws GameActionException {
-        int cnt = Clock.getBytecodeNum();
         int cur = SA.getSymmetry();
         for (MapInfo info : rc.senseNearbyMapInfos()){
             MapLocation loc = info.getMapLocation();
@@ -52,8 +50,20 @@ public class MapRecorder {
         }
         // update symmetry information
         rc.writeSharedArray(SA.symmetry, cur);
-        int nCnt = Clock.getBytecodeNum();
-//        System.out.println("bytecode used to update: " + (nCnt - cnt));
+    }
+
+    /**
+     * gets the mirrored location on map with current information about map symmetry
+     */
+    public static MapLocation getCorresponding(MapLocation loc) throws GameActionException{
+        if (!SA.symmetryKnown()) {
+            System.err.println("note: symmetry is not known yet: result might be inaccurate");
+        }
+        int sym = SA.getSymmetry();
+        if ((sym & ROT_MASK) != 0)   return new MapLocation(SA.width-1-loc.x, SA.height-1-loc.y);
+        if ((sym & HORIZ_MASK) != 0) return new MapLocation(loc.x, SA.height-1-loc.y);
+        if ((sym & VERT_MASK) != 0)  return new MapLocation(SA.width-1-loc.x, loc.y);
+        return null; // somehow no symmetry
     }
 
     // helper methods

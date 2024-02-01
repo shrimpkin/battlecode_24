@@ -33,7 +33,7 @@ public class FlagReturn {
         //this makes sure that if we are already on the other side of the enemies that we 
         if(noEnemies().distanceSquaredTo(rc.getLocation()) < Combat.averageEnemy.distanceSquaredTo(noEnemies())) {
             indicator += "NEN ";
-            noEnemies();
+            return noEnemies();
         }
         
         indicator += "RAW ";
@@ -74,6 +74,20 @@ public class FlagReturn {
                 target = spawn;
             }
         }
+        return target;
+    }
+
+    public static MapLocation getEscortDirection() throws GameActionException {
+        MapLocation target = SA.getLocation(SA.escort);
+        MapLocation flagBearer = SA.getLocation(SA.escort);
+
+        Direction toFlagBearer = flagBearer.directionTo(rc.getLocation());
+        Direction toHome = rc.getLocation().directionTo(getReturnTarget());
+
+        if(rc.getLocation().distanceSquaredTo(target) <= 1 && toFlagBearer.equals(toHome)) {
+            return rc.getLocation().add(toFlagBearer.opposite());
+        }
+
         return target;
     }
 }

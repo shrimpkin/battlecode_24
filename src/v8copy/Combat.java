@@ -13,7 +13,6 @@ import battlecode.common.TrapType;
 public class Combat {
     static RobotController rc;
     static int ID;
-    boolean shouldRunAway;
 
     static int numEnemiesAttackingUs;
     static int numFriendliesHealingUs;
@@ -30,30 +29,11 @@ public class Combat {
     static MapLocation averageTrap;
     static MapLocation averageNearTrap;
 
-    static int OUTNUMBER = 2;
-    static int IS_STUCK_TURNS = 10;
-
     //these are constants used for controlling
     //the attack and defense directions
-    //TODO: mess around with these 
-    //the more positive this is the more the duck will attempt to be near friends
-    static int NEAR_FRIEND_BONUS = 20;
-    // the more negative this is the more the duck will attempt to avoid enemies
-    static int NEAR_ENEMY_BONUS = -80;
-    // the more positive this is the more the duck will attempt to kill an enemy
-    static int KILL_ENEMY_BONUS = 1000;
-    // the more positivie this is the more the duck will attempt to damage an enemy
-    static int DAMAGE_ENEMY_BONUS = 200;
-    // the more negative this is the more the duck will attempt to go towards the enemies
-    static int APPROACH_ENEMY_BONUS = -50; 
-    // avoid blocking
-    static int BLOCKING_BONUS = -50;
-    // the more negative this is the more the duck will attempt to not fill in water
-    static int WATER_BONUS = -50;
+    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE}
 
-    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE};
-
-    enum ActionMode {HEAL, ATT, NONE};
+    enum ActionMode {HEAL, ATT, NONE}
 
     static CombatMode[] modeLog;
     static MapLocation[] locations;
@@ -140,132 +120,19 @@ public class Combat {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
-    
-    /**
-     * @return true if the robot has been in combat for the last three rounds
-     *          and has not done anything during those three rounds
-     */
-    public static boolean isUseless() throws GameActionException {
-        for(int i = 1; i <= IS_STUCK_TURNS; i++) {
-            int index = rc.getRoundNum() - i;
-
-            if(index < 0) return false;
-            if(locations[index] == null) return false;
-            if(!locations[index].equals(rc.getLocation())) return false;
-            if(!actionLog[index].equals(ActionMode.NONE)) return false;
-        }
-
-        return true;
-    }
 
     /**
      * Adjust the boolean runAway if the robot should run away
      */
     public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs  > 0 
+        return numEnemiesAttackingUs > 0
             || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 800 && numFriendliesHealingUs > 0);
+            || (rc.getHealth() < 600);
     }
 
-    /**
-     * Gets the direction that has the least potential attacking enemies
-     */
-    public static Direction getDefensiveDirection() throws GameActionException {
-        Direction[] dirsToConsider = Utils.directions;
-        Direction bestDirectionSoFar = Direction.CENTER;
-        int bestScore = -60000;
-
-        for (Direction dir : dirsToConsider) {
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER)) {
-                MapLocation targetLocation = rc.getLocation().add(dir);
-                int currentScore = 0;
-                for (RobotInfo enemy : enemies) {
-                    //this checks if an enemy could attack the current robot
-                    if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        currentScore += NEAR_ENEMY_BONUS; 
-                    }
-                }
-
-                for(RobotInfo friend : friendlies) {
-                    if (targetLocation.isWithinDistanceSquared(friend.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        currentScore += NEAR_FRIEND_BONUS; 
-                    }
-                }
-
-                if (currentScore > bestScore) {
-                    bestDirectionSoFar = dir;
-                    bestScore = currentScore;
-                } 
-            }
-        }
-        indicator += "score: " + bestScore + " ";
-        return bestDirectionSoFar;
-    }
-
-    /**
-     * returns the direction that allows for hitting the lowest health enemy
-     */
-    public static Direction getOffensiveDirection() throws GameActionException {
-        Direction[] dirsToConsider = Utils.directions;
-        Direction bestDirectionSoFar = Direction.CENTER;
-        int bestScore = Integer.MIN_VALUE;
-        boolean canKill;
-        boolean canDamage;
-        for (Direction dir : dirsToConsider) {
-            MapLocation targetLocation = rc.getLocation().add(dir);
-            boolean isWater = rc.canSenseLocation(targetLocation) && rc.senseMapInfo(targetLocation).isWater();
-            if (rc.canMove(dir) || dir.equals(Direction.CENTER) || (isWater && rc.canFill(targetLocation))) {
-
-                int numEnemies = 0;
-                canKill = false;
-                canDamage = false;
-                int frie = 0;
-
-                for (RobotInfo enemy : enemies) {
-                    if (targetLocation.isWithinDistanceSquared(enemy.getLocation(), GameConstants.ATTACK_RADIUS_SQUARED)) {
-                        numEnemies++;
-                        canDamage = true;
-                        if(enemy.getHealth() < rc.getAttackDamage()) {
-                            canKill = true;
-                        }
-                    }
-                }
-
-                for(RobotInfo friendly : friendlies) {
-                    if(targetLocation.isWithinDistanceSquared(friendly.getLocation(), 1)) {
-                        frie++;
-                    }
-                }
-
-                int currentScore = NEAR_ENEMY_BONUS * numEnemies; 
-                if(canKill && rc.isActionReady() && !isWater) currentScore += KILL_ENEMY_BONUS;
-                if(canDamage && rc.isActionReady() && !isWater) currentScore += DAMAGE_ENEMY_BONUS;
-
-                currentScore += APPROACH_ENEMY_BONUS * targetLocation.distanceSquaredTo(averageEnemy);
-                currentScore += frie * BLOCKING_BONUS;
-                if(isWater) currentScore += WATER_BONUS;
-
-                if(currentScore > bestScore) {
-                    bestDirectionSoFar = dir;
-                    bestScore = currentScore;
-                }
-            }
-        }
-        indicator += "score: " + bestScore + " ";
-
-        return bestDirectionSoFar;
-    }
-
-    /**
-     * Makes the
-     *
-     * @return
-     * @throws GameActionException
-     */
     public static Direction getFlagProtectionDirection() throws GameActionException {
         //first check to see if the enemies have already grabbed our flag
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
-
         for (FlagInfo flag : flags) {
             MapLocation flagLocation = flag.getLocation();
             RobotInfo robot = rc.senseRobotAtLocation(flagLocation);
@@ -273,34 +140,23 @@ public class Combat {
                 return rc.getLocation().directionTo(flagLocation);
             }
         }
-
-        return getOffensiveDirection();
+        return Micro.getOffensiveDirection();
     }
 
-    /**
-     * @return
-     * @throws GameActionException
-     */
     public static Direction getFlagOffensiveDirection() throws GameActionException {
         return rc.getLocation().directionTo(getFlagTarget().getLocation());
     }
 
     public static FlagInfo getFlagTarget() throws GameActionException {
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
-
         for (FlagInfo flag : flags) {
             if (rc.getLocation().isWithinDistanceSquared(flag.getLocation(), 4)) {
                 return flag;
             }
         }
-
         return null;
     }
 
-    /**
-     * @return
-     * @throws GameActionException
-     */
     public static boolean shouldGrabFlag() throws GameActionException {
         FlagInfo flagTarget = getFlagTarget();
         if (flagTarget == null) return false;
@@ -316,7 +172,7 @@ public class Combat {
                 numShooting++;
             }
         }
-        if (numShooting > 2) return false;
+        if (numShooting * 150 > rc.getHealth()) return false;
 
         return true;
     }
@@ -326,22 +182,20 @@ public class Combat {
      * Then the enemy with the lowest health
      */
     public static void attack() throws GameActionException {
-
         //attacks any enemy robots it can
         int minHealth = Integer.MAX_VALUE;
         MapLocation target = null;
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo robot : enemyRobots) {
-            //attacking flag carier if possible
+            //attacking flag carrier if possible
             if (robot.hasFlag() && rc.canAttack(robot.getLocation())) {
                 rc.attack(robot.getLocation());
                 indicator += "a: " + target + " ";
                 return;
             }
 
-            if (rc.canAttack(robot.getLocation())
-                    && rc.senseRobotAtLocation(robot.getLocation()).getHealth() < minHealth) {
-                minHealth = rc.senseRobotAtLocation(robot.getLocation()).getHealth();
+            if (rc.canAttack(robot.getLocation()) && robot.getHealth() < minHealth) {
+                minHealth = robot.getHealth();
                 target = robot.getLocation();
             }
 
@@ -354,13 +208,12 @@ public class Combat {
     }
 
     /**
-     * magic constants where the come from i do not know
+     * magic constants where they come from I do not know
      * where they go who can say
      */
-    public static boolean shouldBuild() throws GameActionException {
+    public static boolean shouldBuild() {
         boolean output = enemies.length >= 3
-                && rc.getRoundNum() > 190 
-                && numTraps * 2 <= enemies.length;
+                && rc.getRoundNum() > 190;
 
         if(195 <= rc.getRoundNum() && rc.getRoundNum() <= 205) {
             return true;
@@ -392,10 +245,8 @@ public class Combat {
 
     /**
      * Returns a MapLocation to build on that is best
-     *
-     * @return
      */
-    public static MapLocation buildTarget(TrapType trap) throws GameActionException {
+    public static MapLocation buildTarget(TrapType trap) {
         MapLocation bestLocationSoFar = rc.getLocation();
         int minDistance = Integer.MAX_VALUE;
         for (Direction dir : Utils.directions) {
@@ -410,72 +261,23 @@ public class Combat {
     }
 
     public static void build() throws GameActionException {
-        TrapType best = TrapType.NONE;
+        MapLocation buildTarget = buildTarget(TrapType.STUN);
+        boolean canBuildTrap = rc.canBuild(TrapType.STUN, buildTarget);
 
-        // picking between stun or bomb if possible
-        if(rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost) {
-            // we want to multiply by damage dealt and divide by cost of trap
-            // for stun, multiply by 150, divide by 100 = 1.5
-            // for bomb, multiply by 750, divide by 250 = 3
-            // idk why i multiplied stunEV by 3, if i didn't then it would always choose bomb
-            double stunEV = numFriendlies * 1.5 * 3;
-            int bombEV = numEnemies * 3;
-
-            if(stunEV >= bombEV) {
-                // System.out.println("stun");
-                best = TrapType.STUN;
-            } else {
-                // System.out.println("bomb");
-                best = TrapType.EXPLOSIVE;
-            }
-        } else {            
-            best = TrapType.STUN;
-        }
-        if(rc.getRoundNum() == 208) {
-            best = TrapType.EXPLOSIVE;
-        }
-
-
-        MapLocation buildTarget = buildTarget(best);
-        boolean buildInSpawn = false;
-        for(MapLocation spawnLoc : rc.getAllySpawnLocations()) {
-            if(buildTarget.equals(spawnLoc)) {
-                buildInSpawn = true;
-                break;
-            }
-        }
-        boolean canBuildTrap = rc.canBuild(best, buildTarget);
-
-        // if(canBuildTrap && buildInSpawn) {
-        //         rc.build(best, buildTarget);
-        // } else if(canBuildTrap) {
-        //     if(best == TrapType.STUN && buildTarget.x % 3 == 0 && buildTarget.y % 3 == 0) {
-        //         rc.build(best, buildTarget);
-        //     } else if(best == TrapType.EXPLOSIVE && buildTarget.x % 2 == 0 && buildTarget.y % 2 == 0) {
-        //         rc.build(best, buildTarget);
-        //     }
-        // }
-
-        // get nearby traps
-        boolean shouldBuildTrap = true;
-        int numNearbyTraps = 0;
-        for(MapInfo adjacentCell : rc.senseNearbyMapInfos(rc.getLocation(), 2)) {
-            if(adjacentCell.getTrapType() != TrapType.NONE) {
-                if(best == TrapType.STUN) {
-                    shouldBuildTrap = false;
+        boolean adjacentToTrap = false;
+        for (Direction d: new Direction[]{Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+            MapLocation adjacent = buildTarget.add(d);
+            if (rc.canSenseLocation(adjacent)) {
+                MapInfo spot = rc.senseMapInfo(adjacent);
+                if (spot.getTrapType() == TrapType.STUN) {
+                    adjacentToTrap = true;
+                    break;
                 }
-                numNearbyTraps += 1;
             }
         }
 
-        if(best == TrapType.EXPLOSIVE) {
-            if(numNearbyTraps > 4) {
-                shouldBuildTrap = false;
-            }
-        }
-
-        if(canBuildTrap && shouldBuildTrap) {
-            rc.build(best, buildTarget);
+        if(canBuildTrap && !adjacentToTrap) {
+            rc.build(TrapType.STUN, buildTarget);
         }    
     }
 
@@ -484,6 +286,7 @@ public class Combat {
      */
     public static void runCombat() throws GameActionException {
         Combat.reset();
+        Micro.initTurn(rc);
         CombatMode mode = CombatMode.OFF;
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
@@ -495,8 +298,8 @@ public class Combat {
         switch (mode) {
             case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
             case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
-            case DEF: dir = Combat.getDefensiveDirection(); break;
-            case OFF: dir = Combat.getOffensiveDirection(); break;
+            case DEF: dir = Micro.getDefensiveDirection(); break;
+            case OFF: dir = Micro.getOffensiveDirection(); break;
             case NONE: break;
         }
 
@@ -504,11 +307,11 @@ public class Combat {
 
         target = rc.getLocation().add(dir);
         if(rc.canFill(target)) {
-            indicator += "fill ";
+            // System.out.println("FILLING");
             rc.fill(target);
         }
         
-        if (mode.equals(CombatMode.DEF)) {
+        if (mode.equals(CombatMode.FLAG_OFF) || mode.equals(CombatMode.FLAG_DEF) || Micro.shouldAttackFirst) {
             Combat.attack();
             if (rc.canMove(dir)) rc.move(dir);
         } else {
@@ -519,7 +322,6 @@ public class Combat {
         indicator += "mode: " + mode + " ";
         if (shouldBuild()) build();
 
-        updateSA();
     }
 
     /**
@@ -528,13 +330,7 @@ public class Combat {
     public static void updateIndicator() {
         for (int i = rc.getRoundNum(); i > 0; i--) {
             if (rc.getRoundNum() - i > 2) break;
-
             indicator += "(" + modeLog[i] + "," + actionLog[i] + ") ";
         }
-    }
-
-    public static void updateSA() throws GameActionException {
-        int enc = SA.encode(rc.getLocation(), 0);
-        rc.writeSharedArray(SA.ROBOT_COMBAT_INFO_START + ID - 1, enc);
     }
 }

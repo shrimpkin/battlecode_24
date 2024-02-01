@@ -42,7 +42,6 @@ public class Combat {
         locations = new MapLocation[2001];
         actionLog = new ActionMode[2001];
         actionLog[0] = ActionMode.NONE;
-//        micro = new Micro();
     }
 
     public static void reset() throws GameActionException {
@@ -315,7 +314,6 @@ public class Combat {
         indicator += "mode: " + mode + " ";
         if (shouldBuild()) build();
 
-        updateSA();
     }
 
     /**
@@ -326,10 +324,5 @@ public class Combat {
             if (rc.getRoundNum() - i > 2) break;
             indicator += "(" + modeLog[i] + "," + actionLog[i] + ") ";
         }
-    }
-
-    public static void updateSA() throws GameActionException {
-        int enc = SA.encode(rc.getLocation(), 0);
-        rc.writeSharedArray(SA.ROBOT_COMBAT_INFO_START + ID - 1, enc);
     }
 }

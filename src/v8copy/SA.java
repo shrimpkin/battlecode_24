@@ -13,25 +13,19 @@ public class SA {
     // for FLAG1, FLAG2, FLAG3
     // prefix of 0,  means that they are in default position
     // prefix of 1,  means they are in the chosen position
-    public static int FLAG1 = 0;
-    public static int FLAG2 = 1;
-    public static int FLAG3 = 2;
+    public static int FLAG1 = 0, FLAG2 = 1, FLAG3 = 2;
     public static int TARGET_ENEMY_FLAG = 3;
-
-    public static int ENEMY_FLAG1 = 4;
-    public static int ENEMY_FLAG2 = 5;
-    public static int ENEMY_FLAG3 = 6;
+    public static int BROADCAST1 = 4,BROADCAST2 = 5, BROADCAST3 = 6;
+    public static final int EFSPAWN1 = 7, EFSPAWN2 = 8, EFSPAWN3 = 9;
+    public static final int EFID1 = 11, EFID2 = 12, EFID3 = 13;
 
     //for the first turn the location is also used for indexing all robots
-    public static int INDEXING = 7;
-    public static int escort = 8;
-    public static int defend = 9;
-    public static int symmetry = 10; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
+    public static int INDEXING = 60;
+    public static int escort = 61;
+    public static int defend = 62;
+    public static int symmetry = 63; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
 
     static RobotController rc;
-    
-    public static int ROBOT_COMBAT_INFO_START = 14;
-    public static int ROBOT_COMBAT_INFO_END = 64;
 
     static int width, height;
 
@@ -53,10 +47,8 @@ public class SA {
      */
     public static MapLocation getLocation(int index) throws GameActionException {
         int value = rc.readSharedArray(index) >> 4;
-
         int x = value % width;
         int y = value / width;
-        
         return new MapLocation(x, y);
     }
 
@@ -121,5 +113,27 @@ public class SA {
             if(flag.getLocation().equals(SA.getLocation(i))) return;
         // empty space and flag not present: write to first empty location
         rc.writeSharedArray(firstEmpty, encode(flag.getLocation(), 0));
+    }
+
+    // adds opponent flag spawn to the shared array
+    public static boolean addOpponentFlagSpawn(FlagInfo flag) throws GameActionException{
+        if (findOpponentFlagSpawn(flag.getID()) != -1) return false; // already present
+        int i;
+        if (rc.readSharedArray(EFID1) == 0) i = 0;
+        else if (rc.readSharedArray(EFID2) == 0) i = 1;
+        else if (rc.readSharedArray(EFID3) == 0) i = 2;
+        else return false;
+        // prefix of 1 to show it was entered, prefix of 2 to show it was captured
+        rc.writeSharedArray(EFID1 + i, flag.getID());
+        rc.writeSharedArray(EFSPAWN1 + i, SA.encode(flag.getLocation(), 1));
+        return true;
+    }
+
+    // finds the index (offset from 0-2) of the enemy's flag in the array (add to EFID1/EFSPAWN1 to get true position)
+    public static int findOpponentFlagSpawn(int id) throws GameActionException{
+        if (rc.readSharedArray(EFID1) == id) return 0;
+        if (rc.readSharedArray(EFID2) == id) return 1;
+        if (rc.readSharedArray(EFID3) == id) return 2;
+        return -1;
     }
 }
