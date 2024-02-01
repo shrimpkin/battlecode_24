@@ -3,6 +3,8 @@ package v8;
 import battlecode.common.*;
 import scala.util.Random;
 
+import java.util.Optional;
+
 /**
  * RobotPlayer is the class that describes your main robot strategy.
  * The run() method inside this class is like your main function: this is what we'll call once your robot
@@ -257,7 +259,74 @@ public strictfp class RobotPlayer {
         if (target == null) target = getTarget();
 
         boolean hasFlag = rc.hasFlag();
-        if (target != null) { // have a target to move to
+        boolean flagPassed = false;
+        if(target != null) {
+            // flag passing logic
+            // if there's a duck that's closer to the target than us we should drop flag and pass it to them
+            // this should help ducks with flag getting stuck in a cluster
+            if (rc.hasFlag()) {
+                Pathfinding.initTurn();
+                Pathfinding.move(target);
+                // TODO: Also drop flag if we're stuck in like water
+
+                // TODO: ducks can drop flags sqrt 2 away and can pick up sqrt 2 away
+                // right now just sqrt2 dist
+                RobotInfo[] friends = rc.senseNearbyRobots(2, rc.getTeam());
+                RobotInfo bestFriend = null;
+                int friendDistToFlag = Integer.MAX_VALUE;
+                int myDist = rc.getLocation().distanceSquaredTo(target);
+
+                // constants
+                // good one are like disallowPassIfInDanger = true
+                // minFriendsToPass = 7
+                // trying it hyper aggresive
+                int friendPassingDistance = 2;
+                int friendSafetyDistance = 9;
+                int minFriendsToPass = 0;
+                boolean disallowPassIfInDanger = false;
+                int dangerIfNumEnemies = 3;
+                int dangerIfEnemiesWithinDist = 6;
+
+                int numFriends = 0;
+                int numEnemies = 0;
+                MapLocation openLoc = null;
+                for (RobotInfo nearby : rc.senseNearbyRobots(-1)) {
+                    if (nearby.getTeam().equals(rc.getTeam())) {
+                        int dist = nearby.getLocation().distanceSquaredTo(rc.getLocation());
+
+                        if (dist <= friendSafetyDistance) numFriends++;
+                        if (!(dist > friendPassingDistance)) continue;
+                        //if (nearby.ID <= ID) continue; // if the bot already moved we dont want to risk dropping it (TODO: mess with this)
+                        RobotInfo f = nearby;
+                        int distTarget = f.getLocation().distanceSquaredTo(target);
+                        Optional<MapLocation> openLocation = findOpenLocationForFlag(f.getLocation());
+                        if (openLocation.isPresent() && rc.onTheMap(openLocation.get()) && rc.canDropFlag(openLocation.get()) && distTarget < friendDistToFlag) {
+                            friendDistToFlag = distTarget;
+                            bestFriend = f;
+                            // Drop the flag at the open location
+                            // rc.dropFlag(openLocation.get());
+                            openLoc = openLocation.get();
+                        }
+                    } else {
+                        RobotInfo e = nearby;
+                        if (!(rc.getLocation().distanceSquaredTo(e.getLocation()) > dangerIfEnemiesWithinDist)) continue;
+                        numEnemies++;
+                    }
+                }
+
+                boolean shouldPass = true;
+                if (numEnemies >= dangerIfNumEnemies && disallowPassIfInDanger) {shouldPass = false;};
+                if (!(minFriendsToPass <= numFriends)) {shouldPass = false;}
+
+                // passing is better
+                if (bestFriend != null && openLoc != null && shouldPass && friendDistToFlag < myDist) {
+                    //System.out.println("passing!");
+                    rc.dropFlag(openLoc);
+                }
+
+            }
+
+
             // need to check if the target is obstructed first, and if so, fill it
             // but if the target is obstructed, check left and right is also obstructed
             // if left and right also obstructed, then we dig
@@ -291,7 +360,7 @@ public strictfp class RobotPlayer {
 
         // updating shared array that a flag was dropped off during
         // this robots movement
-        if (rc.hasFlag() != hasFlag) {
+        if(rc.hasFlag() != hasFlag && !flagPassed) {
             rc.writeSharedArray(SA.TARGET_ENEMY_FLAG, 0);
             rc.writeSharedArray(SA.escort, 0);
         }
@@ -623,6 +692,18 @@ public strictfp class RobotPlayer {
             rc.heal(target);
             indicator += "h: " + target + " ";
         }
+    }
+
+    private static Optional<MapLocation> findOpenLocationForFlag(MapLocation robotLocation) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                MapLocation checkLocation = new MapLocation(robotLocation.x + dx, robotLocation.y + dy);
+                if (rc.onTheMap(checkLocation) && rc.canSenseLocation(checkLocation) && rc.canDropFlag(checkLocation)) {
+                    return Optional.of(checkLocation);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     public int ID() {
