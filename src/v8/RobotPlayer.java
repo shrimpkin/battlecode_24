@@ -265,6 +265,8 @@ public strictfp class RobotPlayer {
             // if there's a duck that's closer to the target than us we should drop flag and pass it to them
             // this should help ducks with flag getting stuck in a cluster
             if (rc.hasFlag()) {
+                Pathfinding.initTurn();
+                Pathfinding.move(target);
                 // TODO: Also drop flag if we're stuck in like water
 
                 // TODO: ducks can drop flags sqrt 2 away and can pick up sqrt 2 away
@@ -276,7 +278,8 @@ public strictfp class RobotPlayer {
 
                 // constants
                 int friendPassingDistance = 2;
-                int minFriendsToPass = 0;
+                int friendSafetyDistance = 9;
+                int minFriendsToPass = 5;
                 boolean disallowPassIfInDanger = true;
                 int dangerIfNumEnemies = 3;
                 int dangerIfEnemiesWithinDist = 6;
@@ -286,14 +289,16 @@ public strictfp class RobotPlayer {
                 MapLocation openLoc = null;
                 for (RobotInfo nearby : rc.senseNearbyRobots(-1)) {
                     if (nearby.getTeam().equals(rc.getTeam())) {
-                        if (!(nearby.getLocation().distanceSquaredTo(rc.getLocation()) > friendPassingDistance)) continue;
+                        int dist = nearby.getLocation().distanceSquaredTo(rc.getLocation());
+
+                        if (dist <= friendSafetyDistance) numFriends++;
+                        if (!(dist > friendPassingDistance)) continue;
                         //if (nearby.ID <= ID) continue; // if the bot already moved we dont want to risk dropping it (TODO: mess with this)
                         RobotInfo f = nearby;
-                        numFriends++;
-                        int dist = f.getLocation().distanceSquaredTo(target);
+                        int distTarget = f.getLocation().distanceSquaredTo(target);
                         Optional<MapLocation> openLocation = findOpenLocationForFlag(f.getLocation());
-                        if (openLocation.isPresent() && rc.onTheMap(openLocation.get()) && rc.canDropFlag(openLocation.get()) && dist < friendDistToFlag) {
-                            friendDistToFlag = dist;
+                        if (openLocation.isPresent() && rc.onTheMap(openLocation.get()) && rc.canDropFlag(openLocation.get()) && distTarget < friendDistToFlag) {
+                            friendDistToFlag = distTarget;
                             bestFriend = f;
                             // Drop the flag at the open location
                             // rc.dropFlag(openLocation.get());
@@ -312,7 +317,7 @@ public strictfp class RobotPlayer {
 
                 // passing is better
                 if (bestFriend != null && openLoc != null && shouldPass && friendDistToFlag < myDist) {
-                    System.out.println("passing!");
+                    //System.out.println("passing!");
                     rc.dropFlag(openLoc);
                 }
 
