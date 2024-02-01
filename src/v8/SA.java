@@ -26,6 +26,8 @@ public class SA {
     public static int symmetry = 10; // symmetry query - use rightmost 3 as bitset (vert, horiz, rot)
     public static int escortDir = 11;
 
+    public static int PASS_TARGET = 12;
+
     static RobotController rc;
     
     public static int ROBOT_COMBAT_INFO_START = 14;
