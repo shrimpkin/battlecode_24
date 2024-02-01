@@ -57,7 +57,6 @@ public class Micro {
 
         MicroInfo best = microInfo[8];
         boolean shouldAttack = true;
-        
         if(shouldAttack) {
             for (int i = 0; i < 8; i++) {
                 if (microInfo[i].isBetterOffense(best)) {
@@ -155,7 +154,7 @@ public class Micro {
         boolean willDie() {
             if (!canMove) return true;
 
-            return enemiesSniping * DPS >= rc.getHealth();
+            return enemiesTargeting * DPS >= rc.getHealth();
         }
 
         boolean isBetterAttack(MicroInfo m) {
@@ -190,20 +189,17 @@ public class Micro {
         }
 
         boolean isBetterOffense(MicroInfo m) {
-            if (willDie() && !m.willDie()) return false;
-            if (!willDie() && m.willDie()) return true;
-
             if (canKill() && !m.canKill()) return true;
             if (!canKill() && m.canKill()) return false;
+
+            if (willDie() && !m.willDie()) return false;
+            if (!willDie() && m.willDie()) return true;
 
             if (canAttack() && !m.canAttack()) return true;
             if (!canAttack() && m.canAttack()) return false;
 
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
-
-            if(enemiesSniping < m.enemiesSniping) return true;
-            if(enemiesSniping > m.enemiesSniping) return false;
 
             return minDistanceToEnemy < m.minDistanceToEnemy;
         }
