@@ -83,17 +83,11 @@ public class Pathfinding {
             Direction bestDir = null;
             double bestEstimation = 0;
             double firstStep = 1.0;
-            int contRubble = 0;
             int bestEstimationDist = 0;
-            double avgR = 0;
             for (Direction dir : directions) {
                 MapLocation newLoc = myLoc.add(dir);
                 if (!rc.onTheMap(newLoc)) continue;
-
-                //pass
-                avgR += 1.0;
-                ++contRubble;
-
+        
                 if (!canMove(dir)) continue;
                 if (!strictlyCloser(newLoc, myLoc, target)) continue;
 
@@ -106,9 +100,7 @@ public class Pathfinding {
                     bestEstimationDist = newDist;
                 }
             }
-            if (contRubble != 0) {
-                avgRubbleCost = avgR / contRubble;
-            }
+            
             if (bestDir != null) rc.move(bestDir);
         } catch (Exception e) {
             e.printStackTrace();
