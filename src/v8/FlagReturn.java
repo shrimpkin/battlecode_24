@@ -1,9 +1,6 @@
 package v8;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 public class FlagReturn {
     static RobotController rc;
@@ -33,7 +30,7 @@ public class FlagReturn {
         //this makes sure that if we are already on the other side of the enemies that we 
         if(noEnemies().distanceSquaredTo(rc.getLocation()) < Combat.averageEnemy.distanceSquaredTo(noEnemies())) {
             indicator += "NEN ";
-            noEnemies();
+            return noEnemies();
         }
         
         indicator += "RAW ";

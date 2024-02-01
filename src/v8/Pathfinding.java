@@ -1,10 +1,6 @@
 package v8;
 
-import battlecode.common.Direction;
-import battlecode.common.GameConstants;
-import battlecode.common.MapInfo;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 import java.util.HashSet;
 
