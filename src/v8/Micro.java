@@ -92,15 +92,17 @@ public class Micro {
         double enemiesTargeting = 0, enemiesSniping = 0;
         double alliesTargeting = 0;
         boolean canMove = true;
+        int numCrumbs;
         int minHealth = Integer.MAX_VALUE;
         boolean actionReady;
 
-        public MicroInfo(Direction dir) {
+        public MicroInfo(Direction dir) throws GameActionException{
             this.dir = dir;
             this.location = rc.getLocation().add(dir);
             if (!dir.equals(Direction.CENTER) && !rc.canMove(dir)) canMove = false;
             alliesTargeting++;
             actionReady = rc.isActionReady();
+            if (rc.onTheMap(location)) numCrumbs = rc.senseMapInfo(location).getCrumbs();
         }
 
         void updateEnemy(RobotInfo unit) {
@@ -134,7 +136,6 @@ public class Micro {
 
         boolean willDie() {
             if (!canMove) return true;
-
             return enemiesTargeting * DPS >= rc.getHealth();
         }
 
@@ -162,7 +163,11 @@ public class Micro {
             // if both on action cool-down, prioritize location w/ the fewest enemies that can drive-by us in 1 turn
             if (!actionReady && !m.actionReady) return enemiesSniping < m.enemiesSniping;
             // put distance between us and enemy
-            return minDistanceToEnemy > m.minDistanceToEnemy;
+            if (minDistanceToEnemy != m.minDistanceToEnemy) return minDistanceToEnemy > m.minDistanceToEnemy;
+            // maybe put us closer to allies to heal us and stay cohesive
+            if (alliesTargeting != m.alliesTargeting) return alliesTargeting > m.alliesTargeting;
+            // prefer locations w/ more crumbs as last resort
+            return numCrumbs > m.numCrumbs;
         }
 
         boolean isBetterOffense(MicroInfo m) {
@@ -174,14 +179,17 @@ public class Micro {
 
             if (canAttack() && !m.canAttack()) return true;
             if (!canAttack() && m.canAttack()) return false;
-
             // if both on action cool-down, prioritize location w/ the fewest enemies that can drive-by us in 1 turn
             if (!actionReady && !m.actionReady) return enemiesSniping < m.enemiesSniping;
-
+            // fewer enemies that can attack us
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
-
-            return minDistanceToEnemy < m.minDistanceToEnemy;
+            // get close to enemy
+            if (minDistanceToEnemy != m.minDistanceToEnemy) return minDistanceToEnemy < m.minDistanceToEnemy;
+            // maybe put us closer to allies to heal us and to stay cohesive
+            if (alliesTargeting != m.alliesTargeting) return alliesTargeting > m.alliesTargeting;
+            // prefer locations w/ more crumbs as last resort
+            return numCrumbs > m.numCrumbs;
         }
     }
 }
