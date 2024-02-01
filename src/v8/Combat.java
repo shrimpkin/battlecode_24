@@ -23,7 +23,7 @@ public class Combat {
 
     //these are constants used for controlling
     //the attack and defense directions
-    enum CombatMode {OFF, DEF, FLAG_DEF, FLAG_OFF, NONE}
+    enum CombatMode {MICRO, FLAG_DEF, FLAG_OFF, NONE}
 
     enum ActionMode {HEAL, ATT, NONE}
 
@@ -114,14 +114,7 @@ public class Combat {
     }
 
 
-    /**
-     * Adjust the boolean runAway if the robot should run away
-     */
-    public static boolean shouldRunAway() throws GameActionException {
-        return numEnemiesAttackingUs > 0
-            || (numFriendlies < numEnemies) 
-            || (rc.getHealth() < 600);
-    }
+    
 
     public static Direction getFlagProtectionDirection() throws GameActionException {
         //first check to see if the enemies have already grabbed our flag
@@ -280,19 +273,17 @@ public class Combat {
     public static void runCombat() throws GameActionException {
         Combat.reset();
         Micro.initTurn(rc);
-        CombatMode mode = CombatMode.OFF;
+        CombatMode mode = CombatMode.MICRO;
 
         if (shouldDefendFlag()) mode = CombatMode.FLAG_DEF;
         else if (shouldGrabFlag()) mode = CombatMode.FLAG_OFF;
-        else if (shouldRunAway()) mode = CombatMode.DEF;
 
         Direction dir = Direction.CENTER;
 
         switch (mode) {
             case FLAG_OFF: dir = Combat.getFlagOffensiveDirection(); break;
             case FLAG_DEF: dir = Combat.getFlagProtectionDirection(); break;
-            case DEF: dir = Micro.getDefensiveDirection(); break;
-            case OFF: dir = Micro.getOffensiveDirection(); break;
+            case MICRO: dir = Micro.getDirection(); break;
             case NONE: break;
         }
 

@@ -32,6 +32,51 @@ public class Micro {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
+    /**
+     * Adjust the boolean runAway if the robot should run away
+     */
+    public static boolean shouldRunAway() throws GameActionException {
+        return (friendlies.length < enemies.length) 
+            || (rc.getHealth() < 600);
+    }
+
+
+    public static Direction getDirection() throws GameActionException {
+        MicroInfo[] microInfo = new MicroInfo[9];
+        for (int i = 0; i < 9; i++) {
+            microInfo[i] = new MicroInfo(Utils.directions[i]);
+
+            for (RobotInfo unit : enemies) {
+                microInfo[i].updateEnemy(unit);
+            }
+
+            for (RobotInfo unit : friendlies) {
+                microInfo[i].updateAlly(unit);
+            }
+        }
+
+        MicroInfo best = microInfo[8];
+        boolean shouldAttack = true;
+        if(shouldAttack) {
+            for (int i = 0; i < 8; i++) {
+                if (microInfo[i].isBetterOffense(best)) {
+                    best = microInfo[i];
+                }
+            }
+        } else {
+            for (int i = 0; i < 8; i++) {
+                if (microInfo[i].isBetterDefense(best)) {
+                    best = microInfo[i];
+                }
+            }
+        }
+        
+        // microInfo[8] is center
+        shouldAttackFirst = !best.isBetterAttack(microInfo[8]);
+
+        return best.dir;
+    }
+
     public static Direction getOffensiveDirection() throws GameActionException {
         MicroInfo[] microInfo = new MicroInfo[9];
         for (int i = 0; i < 9; i++) {
@@ -57,32 +102,6 @@ public class Micro {
 
         return best.dir;
 
-    }
-
-    public static Direction getDefensiveDirection() throws GameActionException {
-        MicroInfo[] microInfo = new MicroInfo[9];
-        for (int i = 0; i < 9; i++) {
-            microInfo[i] = new MicroInfo(Utils.directions[i]);
-
-            for (RobotInfo unit : enemies) {
-                microInfo[i].updateEnemy(unit);
-            }
-
-            for (RobotInfo unit : friendlies) {
-                microInfo[i].updateAlly(unit);
-            }
-        }
-
-        MicroInfo best = microInfo[8];
-        for (int i = 0; i < 8; i++) {
-            if (microInfo[i].isBetterDefense(best)) {
-                best = microInfo[i];
-            }
-        }
-
-        shouldAttackFirst = !best.isBetterAttack(microInfo[8]);
-
-        return best.dir;
     }
 
     public static class MicroInfo {
@@ -156,6 +175,7 @@ public class Micro {
             // prioritize own life
             if (willDie() && !m.willDie()) return false;
             if (!willDie() && m.willDie()) return true;
+
             // fewer enemies that can attack us
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
