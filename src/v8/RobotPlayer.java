@@ -28,7 +28,6 @@ public strictfp class RobotPlayer {
         while (true) {
             if (rc.getRoundNum() == 1) init();
             indicator = ID + ": ";
-//            if (rc.getRoundNum() == 30) rc.resign();
             Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
             Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
             rc.writeSharedArray(SA.escort, SA.encode(SA.getLocation(SA.escort), 0));
@@ -334,12 +333,10 @@ public strictfp class RobotPlayer {
         //controls defense
         if (ID <= 3) {
             target = getFlagDefense();
-
             //resets defense location if there are no enemies
             if (SA.getLocation(SA.defend).equals(target) && !Utils.isEnemies() && rc.canSenseLocation(target)) {
                 rc.writeSharedArray(SA.defend, 0);
             }
-
             return target;
         }
 
@@ -384,31 +381,44 @@ public strictfp class RobotPlayer {
         }
 
         //go aggresive and if not aggresive targets exists go middle
-        target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
-        if (target.equals(new MapLocation(0, 0)) || target.distanceSquaredTo(rc.getLocation()) > 225) {
-            int best = Integer.MAX_VALUE, index = -1;
-            for (int i = 0; i < 3; i++) {
-                if (rc.readSharedArray(SA.ENEMY_FLAG1 + i) == 0) continue;
-                if (rc == null) System.out.println("FUCK");
-                int dist = rc.getLocation().distanceSquaredTo(SA.getLocation(SA.ENEMY_FLAG1 + i));
-                if (dist < best) {
-                    best = dist;
-                    index = i;
-                }
-            }
-            if (index != -1)
-                target = SA.getLocation(SA.ENEMY_FLAG1 + index);
-            if (target.equals(new MapLocation(0, 0))) {
-                if (rc.readSharedArray(SA.defend) != 0) {
-                    target = SA.getLocation(SA.defend);
-                } else {
-                    target = new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
-                }
-            }
-        }
-
+        target = getOffensiveTarget();
         rc.setIndicatorLine(rc.getLocation(), target, 255, 255, 255);
         return target;
+    }
+
+    private static MapLocation getOffensiveTarget() throws GameActionException {
+        MapLocation me = rc.getLocation();
+        MapLocation eflag = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        MapLocation defense = SA.getLocation(SA.defend);
+        MapLocation broadcast = getClosestBroadcast(me);
+
+        int fDist = me.distanceSquaredTo(eflag);
+        int dDist = me.distanceSquaredTo(defense);
+        int bDist = me.distanceSquaredTo(broadcast);
+
+        if (!eflag.equals(none) && fDist <= dDist && fDist <= bDist){
+            return eflag;
+        } else if (!defense.equals(none) && dDist <= bDist) {
+            return defense;
+        } else if (!broadcast.equals(none)) {
+            return broadcast;
+        } else {
+            return new MapLocation(rc.getMapWidth() / 2, rc.getMapHeight() / 2);
+        }
+    }
+
+    private static final MapLocation none = new MapLocation(0,0);
+    private static MapLocation getClosestBroadcast(MapLocation cur) throws GameActionException{
+        MapLocation ret = null;
+        int minDist = Integer.MAX_VALUE;
+        for (int i = SA.ENEMY_FLAG1; i <= SA.ENEMY_FLAG3; i++){
+            MapLocation cand = SA.getLocation(i);
+            if (cand.distanceSquaredTo(cur) < minDist) {
+                minDist = cand.distanceSquaredTo(cur);
+                ret = cand;
+            }
+        }
+        return ret;
     }
 
     /**
@@ -469,7 +479,6 @@ public strictfp class RobotPlayer {
                     return;
                 }
             }
-
             MapLocation[] loc = {rc.getLocation().add(Direction.NORTHWEST), rc.getLocation().add(Direction.SOUTHEAST)};
             for (MapLocation pos : loc) {
                 MapInfo pinfo = rc.senseMapInfo(pos);
@@ -478,7 +487,6 @@ public strictfp class RobotPlayer {
                     return;
                 }
             }
-
         }
     }
 
