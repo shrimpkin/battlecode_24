@@ -113,9 +113,6 @@ public class Combat {
         averageEnemy = new MapLocation((int) averageEnemy_x, (int) averageEnemy_y);
     }
 
-
-    
-
     public static Direction getFlagProtectionDirection() throws GameActionException {
         //first check to see if the enemies have already grabbed our flag
         FlagInfo[] flags = rc.senseNearbyFlags(-1, rc.getTeam());
