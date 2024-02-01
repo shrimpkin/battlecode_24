@@ -135,7 +135,7 @@ public class Micro {
         boolean willDie() {
             if (!canMove) return true;
 
-            return (enemiesTargeting + (enemiesSniping - enemiesTargeting) / 2) * DPS >= rc.getHealth();
+            return (enemiesTargeting + (enemiesSniping - enemiesTargeting) / 3) * DPS >= rc.getHealth();
         }
 
         boolean isBetterAttack(MicroInfo m) {
