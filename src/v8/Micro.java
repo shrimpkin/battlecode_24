@@ -135,7 +135,7 @@ public class Micro {
         boolean willDie() {
             if (!canMove) return true;
 
-            return enemiesTargeting * DPS >= rc.getHealth();
+            return (enemiesTargeting + (enemiesSniping - enemiesTargeting) / 2) * DPS >= rc.getHealth();
         }
 
         boolean isBetterAttack(MicroInfo m) {
@@ -156,7 +156,7 @@ public class Micro {
             // prioritize own life
             if (willDie() && !m.willDie()) return false;
             if (!willDie() && m.willDie()) return true;
-            
+
             // fewer enemies that can attack us
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
