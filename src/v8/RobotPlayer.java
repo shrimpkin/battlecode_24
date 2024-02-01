@@ -27,20 +27,13 @@ public strictfp class RobotPlayer {
         rc = m_rc;
 
         while (true) {
-            indicator = ID + ": ";
-
             if (rc.getRoundNum() == 1) init();
+            indicator = ID + ": ";
             Combat.modeLog[rc.getRoundNum()] = Combat.CombatMode.NONE;
             Combat.actionLog[rc.getRoundNum()] = Combat.ActionMode.NONE;
             rc.writeSharedArray(SA.escort, SA.encode(SA.getLocation(SA.escort), 0));
-
             //tries to spawn in the robot if we can
-            if (!rc.isSpawned()) {
-                spawn();
-                // ensure all 3 spawns have ducks spawn on them
-                if (rc.getRoundNum() == 1 && ID < 9) Clock.yield();
-            }
-
+            if (!rc.isSpawned()) spawn();
             //actions to perform if we are spawned in, or just got spawned in
             if (rc.isSpawned()) {
                 globals();
@@ -51,15 +44,9 @@ public strictfp class RobotPlayer {
                 Combat.attack();
                 heal();
                 defenderBuild(); // probably a better place to put this :/
-                if (rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) {
-                    dig();
-                }
-                if (rc.getRoundNum() >= 230) {
-                    stunAroundSpawn();
-                }
-                if (rc.getRoundNum() >= 190) {
-                    fill();
-                }
+                if (rc.getRoundNum() <= 200 || rc.getCrumbs() >= 400) dig();
+                if (rc.getRoundNum() >= 230) stunAroundSpawn();
+                if (rc.getRoundNum() >= 190) fill();
             }
             rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG1), 255, 0, 0);
             rc.setIndicatorDot(SA.getLocation(SA.ENEMY_FLAG2), 0, 255, 0);
@@ -97,45 +84,45 @@ public strictfp class RobotPlayer {
     public static boolean spawn() throws GameActionException {
         MapLocation[] spawnLocs = rc.getAllySpawnLocations();
         indicator += "SPAWN ";
-
-        //attempting to find a location close to the flag that is being attacked
-        if (rc.readSharedArray(SA.defend) != 0) {
-            indicator += "DEF";
-            MapLocation target = SA.getLocation(SA.defend);
-
-            for (MapLocation spawn : spawnLocs) {
-                //2 makes sure it is in the square around the flag
-                if (spawn.distanceSquaredTo(target) < 2) {
-                    if (rc.canSpawn(spawn)) {
-                        rc.spawn(spawn);
-                        return true;
-                    }
-                }
-            }
-        }
-
-        MapLocation target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
-        int minDist = Integer.MAX_VALUE;
-        MapLocation bestSpawn = null;
-
-        //randomly spawning
-        for (MapLocation spawn : spawnLocs) {
-            if (rc.canSpawn(spawn) && target.distanceSquaredTo(spawn) < minDist) {
-                bestSpawn = spawn;
-                minDist = target.distanceSquaredTo(bestSpawn);
-            }
-        }
-
-        if (bestSpawn == null) {
-
-        }
-
-        if (bestSpawn != null) {
-            rc.spawn(bestSpawn);
+        // round 1 spawning behavior: have bots ID 1,2,3 spawn on their respective flags:
+        if (rc.getRoundNum() == 1 && ID <= 3){
+            rc.spawn(spawnLocs[(ID-1)*9+4]);
             return true;
         }
 
-        return false;
+        // target prioritization:
+        // defend > target > //TODO: decide for the following: [escort, broadcasts]
+        MapLocation target;
+        if (rc.readSharedArray(SA.defend) != 0) {
+            indicator += "DEF";
+            target = SA.getLocation(SA.defend);
+        } else if (rc.readSharedArray(SA.TARGET_ENEMY_FLAG) != 0) {
+            indicator += "ATK-FLG";
+            target = SA.getLocation(SA.TARGET_ENEMY_FLAG);
+        } else {
+            indicator += "RAND";
+            target = null;
+        }
+
+        MapLocation best = null;
+        int minDist = Integer.MAX_VALUE;
+        for (MapLocation spawn : spawnLocs) {
+            if (!rc.canSpawn(spawn)) continue;
+            if (target == null) {
+                best = spawn;
+                break;
+            }
+            if (spawn.distanceSquaredTo(target) < minDist) {
+                minDist = spawn.distanceSquaredTo(target);
+                best = spawn;
+            }
+        }
+        if (best != null) {
+            rc.spawn(best);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
