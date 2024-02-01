@@ -301,6 +301,7 @@ public class Combat {
         }
 
         indicator += "mode: " + mode + " ";
+        indicator += Micro.indicator;
         if (shouldBuild()) build();
 
         updateSA();

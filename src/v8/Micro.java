@@ -14,6 +14,7 @@ public class Micro {
     static boolean shouldAttackFirst = false;
 
     public static void initTurn(RobotController r) throws GameActionException {
+        indicator = "";
         rc = r;
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         friendlies = rc.senseNearbyRobots(-1, rc.getTeam());
@@ -56,19 +57,10 @@ public class Micro {
         }
 
         MicroInfo best = microInfo[8];
-        boolean shouldAttack = true;
-        
-        if(shouldAttack) {
-            for (int i = 0; i < 8; i++) {
-                if (microInfo[i].isBetterOffense(best)) {
-                    best = microInfo[i];
-                }
-            }
-        } else {
-            for (int i = 0; i < 8; i++) {
-                if (microInfo[i].isBetterDefense(best)) {
-                    best = microInfo[i];
-                }
+      
+        for (int i = 0; i < 8; i++) {
+            if (microInfo[i].isBetterOffense(best)) {
+                best = microInfo[i];
             }
         }
         
@@ -102,7 +94,6 @@ public class Micro {
         shouldAttackFirst = !best.isBetterAttack(microInfo[8]);
 
         return best.dir;
-
     }
 
     public static class MicroInfo {
@@ -190,21 +181,27 @@ public class Micro {
         }
 
         boolean isBetterOffense(MicroInfo m) {
+            indicator = "";
+            indicator += "d ";
             if (willDie() && !m.willDie()) return false;
             if (!willDie() && m.willDie()) return true;
-
+            indicator += "k ";
             if (canKill() && !m.canKill()) return true;
             if (!canKill() && m.canKill()) return false;
 
+            indicator += "a ";
             if (canAttack() && !m.canAttack()) return true;
             if (!canAttack() && m.canAttack()) return false;
-
+            
+            indicator += "eT ";
             if (enemiesTargeting < m.enemiesTargeting) return true;
             if (enemiesTargeting > m.enemiesTargeting) return false;
-
+            
+            indicator += "eS ";
             if(enemiesSniping < m.enemiesSniping) return true;
             if(enemiesSniping > m.enemiesSniping) return false;
-
+            
+            indicator += "tie ";
             return minDistanceToEnemy < m.minDistanceToEnemy;
         }
     }
